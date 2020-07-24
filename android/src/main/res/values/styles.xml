@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="colorSecondary">@color/colorAccent</item>
+    </style>
+
+    <style name="NavigationMapRoute">
+        <!-- Colors -->
+        <item name="routeColor">@color/mapbox_navigation_route_layer_blue</item>
+        <item name="routeModerateCongestionColor">
+            @color/mapbox_navigation_route_layer_congestion_yellow
+        </item>
+        <item name="routeSevereCongestionColor">
+            @color/mapbox_navigation_route_layer_congestion_red
+        </item>
+        <item name="routeShieldColor">@color/mapbox_navigation_route_shield_layer_color</item>
+        <item name="alternativeRouteColor">@color/mapbox_navigation_route_alternative_color</item>
+        <item name="alternativeRouteModerateCongestionColor">
+            @color/mapbox_navigation_route_alternative_congestion_yellow
+        </item>
+        <item name="alternativeRouteSevereCongestionColor">
+            @color/mapbox_navigation_route_alternative_congestion_red
+        </item>
+        <item name="alternativeRouteShieldColor">
+            @color/mapbox_navigation_route_alternative_shield_color
+        </item>
+        <!-- Scales -->
+        <item name="routeScale">1.0</item>
+        <item name="alternativeRouteScale">1.0</item>
+        <item name="upcomingManeuverArrowColor">
+            @color/mapbox_navigation_route_upcoming_maneuver_arrow_color
+        </item>
+        <item name="upcomingManeuverArrowBorderColor">
+            @color/mapbox_navigation_route_upcoming_maneuver_arrow_border_color
+        </item>
+
+        <!-- Expression styling -->
+        <item name="roundedLineCap">true</item>
+    </style>
+</resources>
