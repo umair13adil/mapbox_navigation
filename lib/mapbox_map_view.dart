@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mapbox_navigation/mapbox_options.dart';
 
 typedef void MapViewCreatedCallback(MapViewController controller);
 
@@ -45,8 +46,38 @@ class MapViewController {
 
   final MethodChannel _channel;
 
-  Future<void> showMap(String text) async {
-    assert(text != null);
-    return _channel.invokeMethod('showMapView', text);
+  Future<String> showMap(MapBoxOptions options) async {
+    assert(options != null);
+    return _channel.invokeMethod('showMapView', <String, dynamic>{
+      'initialLat': options.initialLat,
+      'initialLong': options.initialLong,
+      'originLat': options.originLat,
+      'originLong': options.originLong,
+      'destinationLat': options.destinationLat,
+      'destinationLong': options.destinationLong,
+      'shouldSimulateRoute': options.shouldSimulateRoute,
+      'language': options.language,
+      'zoom': options.zoom,
+      'bearing': options.bearing,
+      'tilt': options.tilt,
+      'alternatives': options.alternatives,
+      'clientAppName': options.clientAppName,
+      'profile': options.profile,
+      'continueStraight': options.continueStraight,
+      'enableRefresh': options.enableRefresh,
+      'steps': options.steps,
+      'voiceInstructions': options.voiceInstructions,
+      'bannerInstructions': options.bannerInstructions,
+      'testRoute': options.testRoute,
+      'debug': options.debug,
+    });
+  }
+
+  Future<String> buildRoute() async {
+    return _channel.invokeMethod('buildRoute');
+  }
+
+  Future<String> startNavigation() async {
+    return _channel.invokeMethod('startNavigation');
   }
 }

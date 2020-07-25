@@ -73,11 +73,6 @@ class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.Requ
 
             channel?.setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "startService" -> {
-                        context.let {
-                            result.success("Started Navigation")
-                        }
-                    }
                     else -> result.notImplemented()
                 }
             }
@@ -109,9 +104,6 @@ class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.Requ
         @JvmStatic
         private fun doIfPermissionsGranted() {
             Timber.i(String.format("doIfPermissionsGranted, %s", "Starting Navigation"))
-            /*currentActivity?.let {
-                it.startActivity(Intent(it, NavigationViewActivity::class.java))
-            }*/
         }
 
         @JvmStatic
@@ -153,9 +145,7 @@ class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.Requ
         requestPermission()
 
         if (!arePermissionsGranted()) {
-            /*currentActivity?.let {
-                it.startActivity(Intent(it, NavigationViewActivity::class.java))
-            }*/
+
         }
     }
 

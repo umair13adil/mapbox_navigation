@@ -36,6 +36,13 @@ fun getIntValueById(key: String, call: MethodCall): Int? {
     return null
 }
 
+fun getDoubleValueById(key: String, call: MethodCall): Double? {
+    call.argument<Double>(key)?.let {
+        return it
+    }
+    return null
+}
+
 fun getBoolValueById(key: String, call: MethodCall): Boolean {
     call.argument<Boolean>(key)?.let {
         return it
