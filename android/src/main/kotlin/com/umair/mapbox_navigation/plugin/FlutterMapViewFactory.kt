@@ -4,8 +4,14 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.PorterDuff
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import androidx.annotation.NonNull
+import com.mapbox.android.core.permissions.PermissionsManager
 import com.mapbox.api.directions.v5.DirectionsCriteria
 import com.mapbox.api.directions.v5.models.DirectionsResponse
 import com.mapbox.api.directions.v5.models.DirectionsRoute
@@ -16,22 +22,24 @@ import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.geometry.LatLng
-import com.mapbox.mapboxsdk.maps.MapView
-import com.mapbox.mapboxsdk.maps.MapboxMap
-import com.mapbox.mapboxsdk.maps.MapboxMapOptions
-import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
+import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions
+import com.mapbox.mapboxsdk.location.LocationComponentOptions
+import com.mapbox.mapboxsdk.location.modes.CameraMode
+import com.mapbox.mapboxsdk.location.modes.RenderMode
+import com.mapbox.mapboxsdk.maps.*
 import com.mapbox.mapboxsdk.plugins.markerview.MarkerView
 import com.mapbox.mapboxsdk.plugins.markerview.MarkerViewManager
+import com.mapbox.mapboxsdk.style.layers.LineLayer
+import com.mapbox.mapboxsdk.style.layers.Property.LINE_CAP_ROUND
+import com.mapbox.mapboxsdk.style.layers.Property.LINE_JOIN_ROUND
+import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
 import com.umair.mapbox_navigation.MapboxNavigationPlugin
 import com.umair.mapbox_navigation.R
 import com.umair.mapbox_navigation.mapbox.NavigationActivity
-import com.umair.mapbox_navigation.utils.addDestinationIconSymbolLayer
-import com.umair.mapbox_navigation.utils.getBoolValueById
-import com.umair.mapbox_navigation.utils.getDoubleValueById
-import com.umair.mapbox_navigation.utils.getStringValueById
+import com.umair.mapbox_navigation.utils.*
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -171,6 +179,16 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
         this.mapBoxMap = mapboxMap1
         mapBoxMap?.setStyle(context.getString(R.string.navigation_guidance_day)) { style ->
             context.addDestinationIconSymbolLayer(style)
+            enableLocationComponent(style)
+
+            val routeLineLayer = LineLayer("line-layer-id", "source-id")
+            routeLineLayer.setProperties(
+                    lineWidth(9f),
+                    lineColor(Color.RED),
+                    lineCap(LINE_CAP_ROUND),
+                    lineJoin(LINE_JOIN_ROUND)
+            )
+            style.addLayer(routeLineLayer)
         }
 
         markerViewManager = MarkerViewManager(mapView, mapBoxMap)
@@ -186,13 +204,6 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                 .bearing(bearing)
                 .tilt(tilt)
                 .build()
-
-        if (initialMarkerView != null) {
-            markerViewManager.removeMarker(initialMarkerView!!)
-        }
-
-        //initialMarkerView = MarkerView(initialLocation, customView)
-        markerViewManager.addMarker(initialMarkerView!!)
 
         mapBoxMap?.animateCamera(CameraUpdateFactory
                 .newCameraPosition(cameraPosition), 7000)
@@ -214,23 +225,32 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
         }
     }
 
+    private fun addCustomMarker(location: LatLng) {
+        if (initialMarkerView != null) {
+            markerViewManager.removeMarker(initialMarkerView!!)
+        }
+
+        val markerView = ImageView(context)
+        markerView.setImageResource(R.drawable.marker_1)
+        markerView.layoutParams = ViewGroup.LayoutParams(100, 100)
+
+        initialMarkerView = MarkerView(location, markerView)
+        initialMarkerView?.let {
+            markerViewManager.addMarker(it)
+        }
+    }
+
     private fun getRoute(origin: Point, destination: Point, context: Context) {
         NavigationRoute.builder(context)
                 .accessToken(Mapbox.getAccessToken()!!)
                 .origin(origin)
                 .destination(destination)
-                .language(Locale.US)
+                .language(getLocaleFromCode(language))
                 .alternatives(alternatives)
                 .clientAppName(clientAppName)
                 .profile(profile)
                 .continueStraight(continueStraight)
                 .enableRefresh(enableRefresh)
-                .routeOptions(RouteOptions.builder()
-                        .steps(steps)
-                        .voiceInstructions(voiceInstructions)
-                        .alternatives(alternatives)
-                        .bannerInstructions(bannerInstructions)
-                        .build())
                 .voiceUnits(DirectionsCriteria.METRIC)
                 .build()
                 .getRoute(object : Callback<DirectionsResponse> {
@@ -280,30 +300,54 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+        Timber.i(String.format("onActivityCreated, %s", ""))
         mapView.onCreate(savedInstanceState)
     }
 
     override fun onActivityStarted(activity: Activity) {
+        Timber.i(String.format("onActivityStarted, %s", ""))
         mapView.onStart()
     }
 
     override fun onActivityResumed(activity: Activity) {
+        Timber.i(String.format("onActivityResumed, %s", ""))
         mapView.onResume()
     }
 
     override fun onActivityPaused(activity: Activity) {
+        Timber.i(String.format("onActivityPaused, %s", ""))
         mapView.onPause()
     }
 
     override fun onActivityStopped(activity: Activity) {
+        Timber.i(String.format("onActivityStopped, %s", ""))
         mapView.onStop()
     }
 
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle?) {
+        Timber.i(String.format("onActivitySaveInstanceState, %s", ""))
         mapView.onSaveInstanceState(outState!!)
     }
 
     override fun onActivityDestroyed(activity: Activity) {
+        Timber.i(String.format("onActivityDestroyed, %s", ""))
         mapView.onDestroy()
+    }
+
+    private fun enableLocationComponent(@NonNull loadedMapStyle: Style) {
+        if (PermissionsManager.areLocationPermissionsGranted(context)) {
+            val customLocationComponentOptions = LocationComponentOptions.builder(context)
+                    .pulseEnabled(true)
+                    .build()
+            mapBoxMap?.locationComponent?.let { locationComponent ->
+                locationComponent.activateLocationComponent(
+                        LocationComponentActivationOptions.builder(context, loadedMapStyle)
+                                .locationComponentOptions(customLocationComponentOptions)
+                                .build())
+                locationComponent.isLocationComponentEnabled = true
+                locationComponent.cameraMode = CameraMode.TRACKING
+                locationComponent.renderMode = RenderMode.NORMAL
+            }
+        }
     }
 }

@@ -8,8 +8,11 @@ import com.mapbox.mapboxsdk.style.layers.SymbolLayer
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import com.umair.mapbox_navigation.R
 import io.flutter.plugin.common.MethodCall
+import timber.log.Timber
 import java.io.ByteArrayInputStream
 import java.io.InputStream
+import java.util.*
+import kotlin.collections.ArrayList
 
 fun getListOfStringById(key: String, call: MethodCall): ArrayList<String> {
     val logTypesList = arrayListOf<String>()
@@ -69,4 +72,18 @@ fun Context.addDestinationIconSymbolLayer(loadedMapStyle: Style) {
             PropertyFactory.iconIgnorePlacement(true)
     )
     loadedMapStyle.addLayer(destinationSymbolLayer)
+}
+
+fun getLocaleFromCode(locale: String): Locale {
+    val locales: Array<Locale> = Locale.getAvailableLocales()
+
+    val filtered = locales.filter {
+        it.country.equals(locale, ignoreCase = true)
+    }
+
+    return if (filtered.isNotEmpty()) {
+        filtered.first()
+    } else {
+        Locale.ENGLISH
+    }
 }

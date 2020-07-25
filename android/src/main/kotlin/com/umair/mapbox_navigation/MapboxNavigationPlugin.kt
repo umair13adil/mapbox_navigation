@@ -20,6 +20,10 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.PluginRegistry
 import io.flutter.plugin.platform.PlatformView
 import timber.log.Timber
+import timber.log.Timber.DebugTree
+
+
+
 
 
 class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.RequestPermissionsResultListener, PlatformView {
@@ -67,6 +71,7 @@ class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.Requ
 
         @JvmStatic
         private fun setUpPluginMethods(context: Context, messenger: BinaryMessenger) {
+            Timber.plant(DebugTree())
 
             channel = MethodChannel(messenger, "mapbox_navigation")
             notifyIfPermissionsGranted(context)
