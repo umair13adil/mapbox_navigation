@@ -1,9 +1,15 @@
-package com.umair.mapbox_navigation.mapbox
+package com.umair.mapbox_navigation.plugin
 
+import android.app.Activity
+import android.app.Application
+import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.location.Location
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
+import android.view.View
+import androidx.annotation.NonNull
 import com.mapbox.api.directions.v5.DirectionsCriteria
 import com.mapbox.api.directions.v5.models.BannerInstructions
 import com.mapbox.api.directions.v5.models.DirectionsResponse
@@ -12,16 +18,10 @@ import com.mapbox.geojson.Feature
 import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.geometry.LatLng
-import com.mapbox.mapboxsdk.maps.MapView
-import com.mapbox.mapboxsdk.maps.MapboxMap
-import com.mapbox.mapboxsdk.maps.MapboxMap.OnMapClickListener
-import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
-import com.mapbox.mapboxsdk.maps.Style
+import com.mapbox.mapboxsdk.maps.*
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
-import com.mapbox.services.android.navigation.ui.v5.NavigationLauncher
-import com.mapbox.services.android.navigation.ui.v5.NavigationLauncherOptions
 import com.mapbox.services.android.navigation.ui.v5.listeners.BannerInstructionsListener
 import com.mapbox.services.android.navigation.ui.v5.listeners.NavigationListener
 import com.mapbox.services.android.navigation.ui.v5.listeners.RouteListener
@@ -36,17 +36,25 @@ import com.mapbox.services.android.navigation.v5.offroute.OffRouteListener
 import com.mapbox.services.android.navigation.v5.route.FasterRouteListener
 import com.mapbox.services.android.navigation.v5.routeprogress.ProgressChangeListener
 import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress
+import com.umair.mapbox_navigation.MapboxNavigationPlugin
 import com.umair.mapbox_navigation.R
-import kotlinx.android.synthetic.main.activity_navigation_view.*
+import io.flutter.plugin.common.BinaryMessenger
+import io.flutter.plugin.common.MethodCall
+import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.MethodChannel.MethodCallHandler
+import io.flutter.plugin.platform.PlatformView
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import timber.log.Timber
 import java.util.*
 
-class NavigationViewActivity : AppCompatActivity(),
+class FlutterMapViewFactory internal constructor(val context: Context, messenger: BinaryMessenger, id: Int, activity: Activity) :
+        PlatformView,
+        MethodCallHandler,
+        Application.ActivityLifecycleCallbacks,
         OnMapReadyCallback,
-        OnMapClickListener,
+        MapboxMap.OnMapClickListener,
         ProgressChangeListener,
         OffRouteListener,
         MilestoneEventListener,
@@ -57,32 +65,44 @@ class NavigationViewActivity : AppCompatActivity(),
         BannerInstructionsListener,
         RouteListener {
 
-    private var mapView: MapView? = null
+    private val methodChannel: MethodChannel = MethodChannel(messenger, MapboxNavigationPlugin.view_name + id)
+    private val options: MapboxMapOptions = MapboxMapOptions.createFromAttributes(context)
+    private var mapView = MapView(context, options)
     private var mapboxMap: MapboxMap? = null
     private var currentRoute: DirectionsRoute? = null
     private var navigationMapRoute: NavigationMapRoute? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        Mapbox.getInstance(this, "")
-        setContentView(R.layout.activity_navigation_view)
-        mapView = findViewById(R.id.mapView)
-        mapView?.onCreate(savedInstanceState)
-        mapView?.getMapAsync(this)
+    override fun getView(): View {
+        Timber.i(String.format("getView, %s", ""))
+        return mapView
+    }
 
-        startButton?.setOnClickListener {
-            Timber.e(String.format("Start Navigation, %s", ""))
-            val options = NavigationLauncherOptions.builder()
-                    .directionsRoute(currentRoute)
-                    .shouldSimulateRoute(false)
-                    .build()
-            NavigationLauncher.startNavigation(this, options)
+    override fun onMethodCall(methodCall: MethodCall, result: MethodChannel.Result) {
+        when (methodCall.method) {
+            "showMapView" -> showMapView(methodCall, result)
+            else -> result.notImplemented()
         }
+    }
+
+    private fun showMapView(methodCall: MethodCall, result: MethodChannel.Result) {
+        val text = methodCall.arguments as String
+        Timber.i(String.format("showMapView, %s", text))
+        result.success(null)
+    }
+
+    override fun dispose() {
+        Timber.i(String.format("dispose, %s", ""))
+    }
+
+    init {
+        activity.application.registerActivityLifecycleCallbacks(this)
+        methodChannel.setMethodCallHandler(this)
+        mapView.getMapAsync(this)
     }
 
     override fun onMapReady(mapboxMap: MapboxMap) {
         this.mapboxMap = mapboxMap
-        mapboxMap.setStyle(getString(R.string.navigation_guidance_day)) { style ->
+        mapboxMap.setStyle(context.getString(R.string.navigation_guidance_day)) { style ->
             addDestinationIconSymbolLayer(style)
             mapboxMap.addOnMapClickListener(this)
         }
@@ -90,7 +110,7 @@ class NavigationViewActivity : AppCompatActivity(),
 
     private fun addDestinationIconSymbolLayer(loadedMapStyle: Style) {
         loadedMapStyle.addImage("destination-icon-id",
-                BitmapFactory.decodeResource(this.resources, R.drawable.mapbox_marker_icon_default))
+                BitmapFactory.decodeResource(context.resources, R.drawable.mapbox_marker_icon_default))
         val geoJsonSource = GeoJsonSource("destination-source-id")
         loadedMapStyle.addSource(geoJsonSource)
         val destinationSymbolLayer = SymbolLayer("destination-symbol-layer-id", "destination-source-id")
@@ -107,12 +127,12 @@ class NavigationViewActivity : AppCompatActivity(),
         val originPoint = Point.fromLngLat(73.0651511, 33.6938118)
         val source = mapboxMap?.style?.getSourceAs<GeoJsonSource>("destination-source-id")
         source?.setGeoJson(Feature.fromGeometry(destinationPoint))
-        getRoute(originPoint, destinationPoint, this)
+        getRoute(originPoint, destinationPoint, context)
         return true
     }
 
-    private fun getRoute(origin: Point, destination: Point, activity: AppCompatActivity) {
-        NavigationRoute.builder(this)
+    private fun getRoute(origin: Point, destination: Point, context: Context) {
+        NavigationRoute.builder(context)
                 .accessToken(Mapbox.getAccessToken()!!)
                 .origin(origin)
                 .destination(destination)
@@ -133,17 +153,17 @@ class NavigationViewActivity : AppCompatActivity(),
                         }
                         currentRoute = response.body()!!.routes()[0]
 
-                        val options = NavigationLauncherOptions.builder()
-                                .directionsRoute(currentRoute)
-                                .shouldSimulateRoute(false)
-                                .build()
-                        NavigationLauncher.startNavigation(activity, options)
+//                        val options = NavigationLauncherOptions.builder()
+//                                .directionsRoute(currentRoute)
+//                                .shouldSimulateRoute(false)
+//                                .build()
+//                        NavigationLauncher.startNavigation(activity, options)
 
                         // Draw the route on the map
                         if (navigationMapRoute != null) {
                             navigationMapRoute?.removeRoute()
                         } else {
-                            navigationMapRoute = NavigationMapRoute(null, mapView!!, mapboxMap!!, R.style.NavigationMapRoute)
+                            navigationMapRoute = NavigationMapRoute(null, mapView, mapboxMap!!, R.style.NavigationMapRoute)
                         }
                         navigationMapRoute?.addRoute(currentRoute)
                     }
@@ -222,42 +242,31 @@ class NavigationViewActivity : AppCompatActivity(),
         return true
     }
 
-    override fun onStart() {
-        super.onStart()
-        mapView?.onStart()
+    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+        mapView.onCreate(savedInstanceState)
     }
 
-    override fun onResume() {
-        super.onResume()
-        mapView?.onResume()
+    override fun onActivityStarted(activity: Activity) {
+        mapView.onStart()
     }
 
-    override fun onPause() {
-        super.onPause()
-        mapView?.onPause()
+    override fun onActivityResumed(activity: Activity) {
+        mapView.onResume()
     }
 
-    override fun onStop() {
-        super.onStop()
-        mapView?.onStop()
+    override fun onActivityPaused(activity: Activity) {
+        mapView.onPause()
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        mapView?.onSaveInstanceState(outState)
+    override fun onActivityStopped(activity: Activity) {
+        mapView.onStop()
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        mapView?.onDestroy()
+    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle?) {
+        mapView.onSaveInstanceState(outState!!)
     }
 
-    override fun onLowMemory() {
-        super.onLowMemory()
-        mapView?.onLowMemory()
-    }
-
-    companion object {
-        private const val TAG = "NavigationViewActivity"
+    override fun onActivityDestroyed(activity: Activity) {
+        mapView.onDestroy()
     }
 }

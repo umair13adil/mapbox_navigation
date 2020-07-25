@@ -27,7 +27,7 @@ class NavigationActivity : AppCompatActivity(), OnNavigationReadyCallback,
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Mapbox.getInstance(this, getString(R.string.access_token))
+        Mapbox.getInstance(this, "")
         
         setContentView(R.layout.activity_navigation)
 

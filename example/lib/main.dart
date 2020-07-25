@@ -1,8 +1,11 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:mapbox_navigation/mapbox_navigation.dart';
+import 'package:mapbox_navigation/mapbox_map_view.dart';
 
 void main() {
   runApp(MyApp());
@@ -14,7 +17,6 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-
   @override
   void initState() {
     super.initState();
@@ -28,9 +30,13 @@ class _MyAppState extends State<MyApp> {
           title: const Text('Plugin example app'),
         ),
         body: Center(
-          child: Text('Running on\n'),
+          child: MapBoxMapView(onMapViewCreated: _onMapViewCreated),
         ),
       ),
     );
+  }
+
+  void _onMapViewCreated(MapViewController controller) {
+    controller.showMap('Hello from Android!');
   }
 }

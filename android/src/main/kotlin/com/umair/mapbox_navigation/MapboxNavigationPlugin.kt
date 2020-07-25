@@ -3,15 +3,14 @@ package com.umair.mapbox_navigation
 import android.Manifest
 import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.view.View
 import androidx.annotation.NonNull
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.umair.mapbox_navigation.mapbox.NavigationViewActivity
 import com.umair.mapbox_navigation.plugin.MapViewFactory
+import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -38,7 +37,18 @@ class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.Requ
         private var currentActivity: Activity? = null
 
         @JvmStatic
+        var view_name = "umair.mapbox_navigation/mapboxMapView"
+
+        @JvmStatic
         var binaryMessenger: BinaryMessenger? = null
+
+        @JvmStatic
+        fun registerWith(engine: FlutterEngine, activity: Activity, accessToken: String) {
+            engine
+                    .platformViewsController.registry
+                    .registerViewFactory(
+                            view_name, MapViewFactory(engine.dartExecutor.binaryMessenger, activity, accessToken))
+        }
 
         @JvmStatic
         fun registerWith(registrar: PluginRegistry.Registrar) {
@@ -46,11 +56,6 @@ class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.Requ
             registrar.addRequestPermissionsResultListener(instance)
             requestPermission()
             setUpPluginMethods(registrar.activity(), registrar.messenger())
-
-            registrar
-                    .platformViewRegistry()
-                    .registerViewFactory(
-                            "umair.mapbox_navigation/mapboxMapView", MapViewFactory(registrar.messenger()));
         }
 
         @JvmStatic
@@ -104,9 +109,9 @@ class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.Requ
         @JvmStatic
         private fun doIfPermissionsGranted() {
             Timber.i(String.format("doIfPermissionsGranted, %s", "Starting Navigation"))
-            currentActivity?.let {
+            /*currentActivity?.let {
                 it.startActivity(Intent(it, NavigationViewActivity::class.java))
-            }
+            }*/
         }
 
         @JvmStatic
@@ -148,9 +153,9 @@ class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.Requ
         requestPermission()
 
         if (!arePermissionsGranted()) {
-            currentActivity?.let {
+            /*currentActivity?.let {
                 it.startActivity(Intent(it, NavigationViewActivity::class.java))
-            }
+            }*/
         }
     }
 
