@@ -3,41 +3,29 @@ package com.umair.mapbox_navigation.plugin
 import android.app.Activity
 import android.app.Application
 import android.content.Context
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
-import android.graphics.BitmapFactory
-import android.location.Location
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import androidx.annotation.NonNull
 import com.mapbox.api.directions.v5.DirectionsCriteria
-import com.mapbox.api.directions.v5.models.BannerInstructions
 import com.mapbox.api.directions.v5.models.DirectionsResponse
 import com.mapbox.api.directions.v5.models.DirectionsRoute
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.geometry.LatLng
-import com.mapbox.mapboxsdk.maps.*
-import com.mapbox.mapboxsdk.style.layers.PropertyFactory
-import com.mapbox.mapboxsdk.style.layers.SymbolLayer
+import com.mapbox.mapboxsdk.maps.MapView
+import com.mapbox.mapboxsdk.maps.MapboxMap
+import com.mapbox.mapboxsdk.maps.MapboxMapOptions
+import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
-import com.mapbox.services.android.navigation.ui.v5.listeners.BannerInstructionsListener
-import com.mapbox.services.android.navigation.ui.v5.listeners.NavigationListener
-import com.mapbox.services.android.navigation.ui.v5.listeners.RouteListener
-import com.mapbox.services.android.navigation.ui.v5.listeners.SpeechAnnouncementListener
+import com.mapbox.services.android.navigation.ui.v5.NavigationLauncher
+import com.mapbox.services.android.navigation.ui.v5.NavigationLauncherOptions
 import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute
-import com.mapbox.services.android.navigation.ui.v5.voice.SpeechAnnouncement
-import com.mapbox.services.android.navigation.v5.milestone.Milestone
-import com.mapbox.services.android.navigation.v5.milestone.MilestoneEventListener
-import com.mapbox.services.android.navigation.v5.navigation.NavigationEventListener
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
-import com.mapbox.services.android.navigation.v5.offroute.OffRouteListener
-import com.mapbox.services.android.navigation.v5.route.FasterRouteListener
-import com.mapbox.services.android.navigation.v5.routeprogress.ProgressChangeListener
-import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress
 import com.umair.mapbox_navigation.MapboxNavigationPlugin
 import com.umair.mapbox_navigation.R
+import com.umair.mapbox_navigation.mapbox.NavigationActivity
+import com.umair.mapbox_navigation.utils.addDestinationIconSymbolLayer
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -49,21 +37,12 @@ import retrofit2.Response
 import timber.log.Timber
 import java.util.*
 
-class FlutterMapViewFactory internal constructor(val context: Context, messenger: BinaryMessenger, id: Int, activity: Activity) :
+class FlutterMapViewFactory internal constructor(private val context: Context, messenger: BinaryMessenger, id: Int, val activity: Activity) :
         PlatformView,
         MethodCallHandler,
         Application.ActivityLifecycleCallbacks,
         OnMapReadyCallback,
-        MapboxMap.OnMapClickListener,
-        ProgressChangeListener,
-        OffRouteListener,
-        MilestoneEventListener,
-        NavigationEventListener,
-        NavigationListener,
-        FasterRouteListener,
-        SpeechAnnouncementListener,
-        BannerInstructionsListener,
-        RouteListener {
+        MapboxMap.OnMapClickListener {
 
     private val methodChannel: MethodChannel = MethodChannel(messenger, MapboxNavigationPlugin.view_name + id)
     private val options: MapboxMapOptions = MapboxMapOptions.createFromAttributes(context)
@@ -103,23 +82,9 @@ class FlutterMapViewFactory internal constructor(val context: Context, messenger
     override fun onMapReady(mapboxMap: MapboxMap) {
         this.mapboxMap = mapboxMap
         mapboxMap.setStyle(context.getString(R.string.navigation_guidance_day)) { style ->
-            addDestinationIconSymbolLayer(style)
+            context.addDestinationIconSymbolLayer(style)
             mapboxMap.addOnMapClickListener(this)
         }
-    }
-
-    private fun addDestinationIconSymbolLayer(loadedMapStyle: Style) {
-        loadedMapStyle.addImage("destination-icon-id",
-                BitmapFactory.decodeResource(context.resources, R.drawable.mapbox_marker_icon_default))
-        val geoJsonSource = GeoJsonSource("destination-source-id")
-        loadedMapStyle.addSource(geoJsonSource)
-        val destinationSymbolLayer = SymbolLayer("destination-symbol-layer-id", "destination-source-id")
-        destinationSymbolLayer.withProperties(
-                PropertyFactory.iconImage("destination-icon-id"),
-                PropertyFactory.iconAllowOverlap(true),
-                PropertyFactory.iconIgnorePlacement(true)
-        )
-        loadedMapStyle.addLayer(destinationSymbolLayer)
     }
 
     override fun onMapClick(point: LatLng): Boolean {
@@ -153,11 +118,7 @@ class FlutterMapViewFactory internal constructor(val context: Context, messenger
                         }
                         currentRoute = response.body()!!.routes()[0]
 
-//                        val options = NavigationLauncherOptions.builder()
-//                                .directionsRoute(currentRoute)
-//                                .shouldSimulateRoute(false)
-//                                .build()
-//                        NavigationLauncher.startNavigation(activity, options)
+                        activity.startActivity(Intent(activity, NavigationActivity::class.java).putExtra("route", currentRoute))
 
                         // Draw the route on the map
                         if (navigationMapRoute != null) {
@@ -172,74 +133,6 @@ class FlutterMapViewFactory internal constructor(val context: Context, messenger
                         Timber.e(String.format("Error, %s", throwable.message))
                     }
                 })
-    }
-
-    override fun onProgressChange(location: Location, routeProgress: RouteProgress) {
-        Timber.i(String.format("onProgressChange, %s, %s", "Current Location: ${location.latitude},${location.longitude}",
-                "Distance Remaining: ${routeProgress.currentLegProgress?.distanceRemaining}"))
-    }
-
-    override fun userOffRoute(location: Location) {
-        Timber.i(String.format("userOffRoute, %s", "Current Location: ${location.latitude},${location.longitude}"))
-    }
-
-    override fun onMilestoneEvent(routeProgress: RouteProgress, instruction: String, milestone: Milestone) {
-        Timber.i(String.format("onMilestoneEvent, %s, %s, %s",
-                "Distance Remaining: ${routeProgress.currentLegProgress?.distanceRemaining}",
-                "Instruction: $instruction",
-                "Milestone: ${milestone.instruction}"
-        ))
-    }
-
-    override fun onRunning(running: Boolean) {
-        Timber.i(String.format("onRunning, %s", "$running"))
-    }
-
-    override fun onCancelNavigation() {
-        Timber.i(String.format("onCancelNavigation, %s", ""))
-    }
-
-    override fun onNavigationFinished() {
-        Timber.i(String.format("onNavigationFinished, %s", ""))
-    }
-
-    override fun onNavigationRunning() {
-        Timber.i(String.format("onNavigationRunning, %s", ""))
-    }
-
-    override fun fasterRouteFound(directionsRoute: DirectionsRoute) {
-        Timber.i(String.format("fasterRouteFound, %s", "New Route Distance: ${directionsRoute.distance()}"))
-    }
-
-    override fun willVoice(announcement: SpeechAnnouncement?): SpeechAnnouncement {
-        Timber.i(String.format("willVoice, %s", "SpeechAnnouncement: ${announcement?.announcement()}"))
-        return announcement!!
-    }
-
-    override fun willDisplay(instructions: BannerInstructions?): BannerInstructions {
-        Timber.i(String.format("willDisplay, %s", "Instructions: ${instructions?.primary()?.text()}"))
-        return instructions!!
-    }
-
-    override fun onArrival() {
-        Timber.i(String.format("onArrival, %s", "Arrived"))
-    }
-
-    override fun onFailedReroute(errorMessage: String?) {
-        Timber.i(String.format("onFailedReroute, %s", errorMessage))
-    }
-
-    override fun onOffRoute(offRoutePoint: Point?) {
-        Timber.i(String.format("onOffRoute, %s", "Point: ${offRoutePoint?.latitude()}, ${offRoutePoint?.longitude()}"))
-    }
-
-    override fun onRerouteAlong(directionsRoute: DirectionsRoute?) {
-        Timber.i(String.format("onRerouteAlong, %s", "Distance: ${directionsRoute?.distance()}"))
-    }
-
-    override fun allowRerouteFrom(offRoutePoint: Point?): Boolean {
-        Timber.i(String.format("allowRerouteFrom, %s", "Point: ${offRoutePoint?.latitude()}, ${offRoutePoint?.longitude()}"))
-        return true
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
