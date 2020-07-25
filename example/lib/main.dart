@@ -47,16 +47,17 @@ class _MyAppState extends State<MyApp> {
                           child: Text("Add Marker"),
                           color: Colors.blue,
                           onPressed: () async {
-                            await controller.addMarker(33.569126, 73.1231471);
+                            await controller.addMarker(
+                                latitude: 33.569126, longitude: 73.1231471);
                             await controller.moveCameraToPosition(
-                                33.569126, 73.1231471);
+                                latitude: 33.569126, longitude: 73.1231471);
                           }),
                       RaisedButton(
                           child: Text("Move Camera"),
                           color: Colors.blue,
                           onPressed: () async {
                             await controller.moveCameraToPosition(
-                                33.6392443, 73.278358);
+                                latitude: 33.6392443, longitude: 73.278358);
                           })
                     ],
                   ),
@@ -68,7 +69,12 @@ class _MyAppState extends State<MyApp> {
                           child: Text("Build Route"),
                           color: Colors.blue,
                           onPressed: () async {
-                            await controller.buildRoute();
+                            await controller.buildRoute(
+                              originLat: 33.569126,
+                              originLong: 73.1231471,
+                              destinationLat: 33.6392443,
+                              destinationLong: 73.278358,
+                            );
                           }),
                       RaisedButton(
                           child: Text("Navigate"),
@@ -92,10 +98,6 @@ class _MyAppState extends State<MyApp> {
     await controller.showMap(MapBoxOptions(
         initialLat: 33.569126,
         initialLong: 73.1231471,
-        originLat: 33.569126,
-        originLong: 73.1231471,
-        destinationLat: 33.6392443,
-        destinationLong: 73.278358,
         shouldSimulateRoute: true,
         enableRefresh: false,
         zoom: 17.0,

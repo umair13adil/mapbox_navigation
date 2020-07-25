@@ -53,7 +53,7 @@ import retrofit2.Response
 import timber.log.Timber
 import java.util.*
 
-class FlutterMapViewFactory internal constructor(private val context: Context, messenger: BinaryMessenger, id: Int, val activity: Activity) :
+class FlutterMapViewFactory internal constructor(private val context: Context, messenger: BinaryMessenger, id: Int, private val activity: Activity) :
         PlatformView,
         MethodCallHandler,
         Application.ActivityLifecycleCallbacks,
@@ -70,6 +70,8 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
     private var mapReady = false
     private lateinit var markerViewManager: MarkerViewManager
     private var initialMarkerView: MarkerView? = null
+    private var isDisposed = false
+    private var activityHashCode = activity.hashCode()
 
     companion object {
 
@@ -110,18 +112,6 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                 getDoubleValueById("initialLong", methodCall).takeIf { it != null }?.let {
                     initialLong = it
                 }
-                getDoubleValueById("originLat", methodCall).takeIf { it != null }?.let {
-                    originLat = it
-                }
-                getDoubleValueById("originLong", methodCall).takeIf { it != null }?.let {
-                    originLong = it
-                }
-                getDoubleValueById("destinationLat", methodCall).takeIf { it != null }?.let {
-                    destinationLat = it
-                }
-                getDoubleValueById("destinationLong", methodCall).takeIf { it != null }?.let {
-                    destinationLong = it
-                }
                 getDoubleValueById("zoom", methodCall).takeIf { it != null }?.let {
                     zoom = it
                 }
@@ -148,6 +138,18 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                 result.success("MapView options set.")
             }
             "buildRoute" -> {
+                getDoubleValueById("originLat", methodCall).takeIf { it != null }?.let {
+                    originLat = it
+                }
+                getDoubleValueById("originLong", methodCall).takeIf { it != null }?.let {
+                    originLong = it
+                }
+                getDoubleValueById("destinationLat", methodCall).takeIf { it != null }?.let {
+                    destinationLat = it
+                }
+                getDoubleValueById("destinationLong", methodCall).takeIf { it != null }?.let {
+                    destinationLong = it
+                }
                 buildRoute(result)
             }
             "addMarker" -> {
@@ -187,7 +189,10 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
     }
 
     override fun dispose() {
+        isDisposed = true
         mapReady = false
+        mapView.onStop()
+        mapView.onDestroy()
         if (debug)
             Timber.i(String.format("dispose, %s", ""))
     }
@@ -326,30 +331,37 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+        //Timber.i(String.format("onActivityCreated, %s, %s, %s", "$activityHashCode", "${activity.hashCode()}", "$isDisposed"))
         mapView.onCreate(savedInstanceState)
     }
 
     override fun onActivityStarted(activity: Activity) {
+        //Timber.i(String.format("onActivityStarted, %s, %s, %s", "$activityHashCode", "${activity.hashCode()}", "$isDisposed"))
         mapView.onStart()
     }
 
     override fun onActivityResumed(activity: Activity) {
+        //Timber.i(String.format("onActivityResumed, %s, %s, %s", "$activityHashCode", "${activity.hashCode()}", "$isDisposed"))
         mapView.onResume()
     }
 
     override fun onActivityPaused(activity: Activity) {
+        //Timber.i(String.format("onActivityPaused, %s, %s, %s", "$activityHashCode", "${activity.hashCode()}", "$isDisposed"))
         mapView.onPause()
     }
 
     override fun onActivityStopped(activity: Activity) {
+        //Timber.i(String.format("onActivityStopped, %s, %s, %s", "$activityHashCode", "${activity.hashCode()}", "$isDisposed"))
         //mapView.onStop()
     }
 
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle?) {
+        //Timber.i(String.format("onActivitySaveInstanceState, %s, %s, %s", "$activityHashCode", "${activity.hashCode()}", "$isDisposed"))
         mapView.onSaveInstanceState(outState!!)
     }
 
     override fun onActivityDestroyed(activity: Activity) {
+        //Timber.i(String.format("onActivityDestroyed, %s, %s, %s", "$activityHashCode", "${activity.hashCode()}", "$isDisposed"))
         //mapView.onDestroy()
     }
 

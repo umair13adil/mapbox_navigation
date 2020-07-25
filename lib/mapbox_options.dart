@@ -1,10 +1,6 @@
 class MapBoxOptions {
   double initialLat;
   double initialLong;
-  double originLat;
-  double originLong;
-  double destinationLat;
-  double destinationLong;
   bool shouldSimulateRoute;
   String language;
   double zoom;
@@ -24,10 +20,6 @@ class MapBoxOptions {
   MapBoxOptions(
       {this.initialLat,
       this.initialLong,
-      this.originLat,
-      this.originLong,
-      this.destinationLat,
-      this.destinationLong,
       this.shouldSimulateRoute,
       this.language,
       this.zoom,
@@ -47,10 +39,6 @@ class MapBoxOptions {
   MapBoxOptions.fromJson(Map<String, dynamic> json) {
     initialLat = json['initialLat'];
     initialLong = json['initialLong'];
-    originLat = json['originLat'];
-    originLong = json['originLong'];
-    destinationLat = json['destinationLat'];
-    destinationLong = json['destinationLong'];
     shouldSimulateRoute = json['shouldSimulateRoute'];
     language = json['language'];
     zoom = json['zoom'];
@@ -72,10 +60,6 @@ class MapBoxOptions {
     final Map<String, dynamic> data = new Map<String, dynamic>();
     data['initialLat'] = this.initialLat;
     data['initialLong'] = this.initialLong;
-    data['originLat'] = this.originLat;
-    data['originLong'] = this.originLong;
-    data['destinationLat'] = this.destinationLat;
-    data['destinationLong'] = this.destinationLong;
     data['shouldSimulateRoute'] = this.shouldSimulateRoute;
     data['language'] = this.language;
     data['zoom'] = this.zoom;

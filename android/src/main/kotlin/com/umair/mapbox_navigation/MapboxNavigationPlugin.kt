@@ -5,7 +5,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import android.view.View
 import androidx.annotation.NonNull
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -18,12 +17,12 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.PluginRegistry
-import io.flutter.plugin.platform.PlatformView
+import io.flutter.plugin.platform.PlatformViewsController
 import timber.log.Timber
 import timber.log.Timber.DebugTree
 
 
-class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.RequestPermissionsResultListener, PlatformView {
+class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.RequestPermissionsResultListener {
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         setUpPluginMethods(flutterPluginBinding.applicationContext, flutterPluginBinding.binaryMessenger)
@@ -41,14 +40,15 @@ class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.Requ
         var view_name = "umair.mapbox_navigation/mapboxMapView"
 
         @JvmStatic
-        var binaryMessenger: BinaryMessenger? = null
+        var viewController: PlatformViewsController? = null
 
         @JvmStatic
-        fun registerWith(engine: FlutterEngine, activity: Activity, accessToken: String) {
-            engine
-                    .platformViewsController.registry
-                    .registerViewFactory(
-                            view_name, MapViewFactory(engine.dartExecutor.binaryMessenger, activity, accessToken))
+        fun registerWith(engine: FlutterEngine, accessToken: String) {
+            viewController = engine.platformViewsController
+            currentActivity?.let { activity ->
+                viewController?.registry?.registerViewFactory(
+                        view_name, MapViewFactory(engine.dartExecutor.binaryMessenger, activity, accessToken))
+            }
         }
 
         @JvmStatic
@@ -136,6 +136,7 @@ class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.Requ
     }
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+        viewController?.detachFromView()
         currentActivity = null
         channel?.setMethodCallHandler(null)
         event_channel?.setStreamHandler(null)
@@ -170,14 +171,6 @@ class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.Requ
             return true
         }
         return false
-    }
-
-    override fun getView(): View {
-        return null!!
-    }
-
-    override fun dispose() {
-
     }
 }
 

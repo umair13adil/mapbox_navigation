@@ -24,7 +24,12 @@ class MainActivity : FlutterActivity() {
         super.onResume()
 
         flutterEngineInstance?.let {
-            MapboxNavigationPlugin.registerWith(it, this, getString(R.string.access_token))
+            MapboxNavigationPlugin.registerWith(it, getString(R.string.access_token))
         }
+    }
+
+    override fun onDestroy() {
+        flutterEngine?.platformViewsController?.onFlutterViewDestroyed()
+        super.onDestroy()
     }
 }
