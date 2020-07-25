@@ -73,10 +73,6 @@ dependencies:
         await controller.showMap(MapBoxOptions(
             initialLat: 33.569126,
             initialLong: 73.1231471,
-            originLat: 33.569126,
-            originLong: 73.1231471,
-            destinationLat: 33.6392443,
-            destinationLong: 73.278358,
             shouldSimulateRoute: true,
             enableRefresh: false,
             zoom: 17.0,
