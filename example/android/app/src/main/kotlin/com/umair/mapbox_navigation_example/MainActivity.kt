@@ -9,8 +9,22 @@ import io.flutter.plugins.GeneratedPluginRegistrant
 
 class MainActivity : FlutterActivity() {
 
+    companion object {
+
+        @JvmStatic
+        var flutterEngineInstance: FlutterEngine? = null
+    }
+
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         GeneratedPluginRegistrant.registerWith(flutterEngine)
-        MapboxNavigationPlugin.registerWith(flutterEngine, this, getString(R.string.access_token))
+        flutterEngineInstance = flutterEngine
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        flutterEngineInstance?.let {
+            MapboxNavigationPlugin.registerWith(it, this, getString(R.string.access_token))
+        }
     }
 }

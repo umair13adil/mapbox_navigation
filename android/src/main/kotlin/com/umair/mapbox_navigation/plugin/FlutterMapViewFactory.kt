@@ -61,6 +61,8 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
 
     private val methodChannel: MethodChannel = MethodChannel(messenger, MapboxNavigationPlugin.view_name + id)
     private val options: MapboxMapOptions = MapboxMapOptions.createFromAttributes(context)
+            .compassEnabled(false)
+            .logoEnabled(true)
     private var mapView = MapView(context, options)
     private var mapBoxMap: MapboxMap? = null
     private var currentRoute: DirectionsRoute? = null
@@ -81,8 +83,8 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
         var shouldSimulateRoute = false
         var language = "en"
         var zoom = 15.0
-        var bearing = 180.0
-        var tilt = 30.0
+        var bearing = 0.0
+        var tilt = 0.0
         var alternatives = false
         var clientAppName = "MapBox Client"
         var profile = "driving"
@@ -143,14 +145,34 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                 testRoute = getStringValueById("testRoute", methodCall)
                 debug = getBoolValueById("debug", methodCall)
 
-                val location = LatLng(originLat, originLong)
-                moveCamera(location)
-                addCustomMarker(location)
-
                 result.success("MapView options set.")
             }
             "buildRoute" -> {
                 buildRoute(result)
+            }
+            "addMarker" -> {
+                val latitude = getDoubleValueById("latitude", methodCall)
+                val longitude = getDoubleValueById("longitude", methodCall)
+
+                if (latitude != null && longitude != null) {
+                    val location = LatLng(latitude, longitude)
+                    addCustomMarker(location)
+                    result.success("Marker Added.")
+                } else {
+                    result.success("Unable to add marker, location invalid.")
+                }
+            }
+            "moveCameraToPosition" -> {
+                val latitude = getDoubleValueById("latitude", methodCall)
+                val longitude = getDoubleValueById("longitude", methodCall)
+
+                if (latitude != null && longitude != null) {
+                    val location = LatLng(latitude, longitude)
+                    moveCamera(location)
+                    result.success("Camera Moved.")
+                } else {
+                    result.success("Unable to move camera, location invalid.")
+                }
             }
             "startNavigation" -> {
                 if (currentRoute != null) {
@@ -166,7 +188,8 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
 
     override fun dispose() {
         mapReady = false
-        Timber.i(String.format("dispose, %s", ""))
+        if (debug)
+            Timber.i(String.format("dispose, %s", ""))
     }
 
     init {
@@ -213,14 +236,22 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                 .newCameraPosition(cameraPosition), 3000)
     }
 
+    private fun isLocationValid(): Boolean {
+        return destinationLong != 0.0 && destinationLat != 0.0 && originLong != 0.0 && originLat != 0.0
+    }
+
     private fun buildRoute(result: MethodChannel.Result) {
         if (mapReady) {
-            val destinationPoint = Point.fromLngLat(destinationLong, destinationLat)
-            val originPoint = Point.fromLngLat(originLong, originLat)
-            val source = mapBoxMap?.style?.getSourceAs<GeoJsonSource>("destination-source-id")
-            source?.setGeoJson(Feature.fromGeometry(destinationPoint))
-            getRoute(originPoint, destinationPoint, context)
-            result.success("Building route.")
+            if (isLocationValid()) {
+                val destinationPoint = Point.fromLngLat(destinationLong, destinationLat)
+                val originPoint = Point.fromLngLat(originLong, originLat)
+                val source = mapBoxMap?.style?.getSourceAs<GeoJsonSource>("destination-source-id")
+                source?.setGeoJson(Feature.fromGeometry(destinationPoint))
+                getRoute(originPoint, destinationPoint, context)
+                result.success("Building route.")
+            } else {
+                result.success("Unable to build route, Invalid location provided.")
+            }
         } else {
             result.success("Unable to build route, map is not ready. Try again.")
         }
@@ -276,7 +307,7 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                         originCoordinate?.let {
                             val location = LatLng(originCoordinate.latitude(), originCoordinate.longitude())
                             moveCamera(location)
-                            addCustomMarker(location)
+                            //addCustomMarker(location)
                         }
 
                         // Draw the route on the map
@@ -295,38 +326,31 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-        Timber.i(String.format("onActivityCreated, %s", ""))
         mapView.onCreate(savedInstanceState)
     }
 
     override fun onActivityStarted(activity: Activity) {
-        Timber.i(String.format("onActivityStarted, %s", ""))
         mapView.onStart()
     }
 
     override fun onActivityResumed(activity: Activity) {
-        Timber.i(String.format("onActivityResumed, %s", ""))
         mapView.onResume()
     }
 
     override fun onActivityPaused(activity: Activity) {
-        Timber.i(String.format("onActivityPaused, %s", ""))
         mapView.onPause()
     }
 
     override fun onActivityStopped(activity: Activity) {
-        Timber.i(String.format("onActivityStopped, %s", ""))
-        mapView.onStop()
+        //mapView.onStop()
     }
 
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle?) {
-        Timber.i(String.format("onActivitySaveInstanceState, %s", ""))
         mapView.onSaveInstanceState(outState!!)
     }
 
     override fun onActivityDestroyed(activity: Activity) {
-        Timber.i(String.format("onActivityDestroyed, %s", ""))
-        mapView.onDestroy()
+        //mapView.onDestroy()
     }
 
     private fun enableLocationComponent(@NonNull loadedMapStyle: Style) {
@@ -342,6 +366,11 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                 locationComponent.isLocationComponentEnabled = true
                 locationComponent.cameraMode = CameraMode.TRACKING
                 locationComponent.renderMode = RenderMode.NORMAL
+
+                locationComponent.lastKnownLocation?.let {
+                    val location = LatLng(it.latitude, it.longitude)
+                    moveCamera(location)
+                }
             }
         }
     }

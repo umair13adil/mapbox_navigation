@@ -80,4 +80,18 @@ class MapViewController {
   Future<String> startNavigation() async {
     return _channel.invokeMethod('startNavigation');
   }
+
+  Future<String> addMarker(double latitude, double longitude) async {
+    return _channel.invokeMethod('addMarker', <String, dynamic>{
+      'latitude': latitude,
+      'longitude': longitude,
+    });
+  }
+
+  Future<String> moveCameraToPosition(double latitude, double longitude) async {
+    return _channel.invokeMethod('moveCameraToPosition', <String, dynamic>{
+      'latitude': latitude,
+      'longitude': longitude,
+    });
+  }
 }

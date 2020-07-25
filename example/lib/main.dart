@@ -37,20 +37,47 @@ class _MyAppState extends State<MyApp> {
             MapBoxMapView(onMapViewCreated: _onMapViewCreated),
             Align(
               alignment: Alignment.bottomCenter,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                crossAxisAlignment: CrossAxisAlignment.center,
+              child: Column(
                 children: <Widget>[
-                  RaisedButton(
-                      child: Text("Build Route"),
-                      onPressed: () async {
-                        await controller.buildRoute();
-                      }),
-                  RaisedButton(
-                      child: Text("Navigate"),
-                      onPressed: () async {
-                        await controller.startNavigation();
-                      })
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      RaisedButton(
+                          child: Text("Add Marker"),
+                          color: Colors.blue,
+                          onPressed: () async {
+                            await controller.addMarker(33.569126, 73.1231471);
+                            await controller.moveCameraToPosition(
+                                33.569126, 73.1231471);
+                          }),
+                      RaisedButton(
+                          child: Text("Move Camera"),
+                          color: Colors.blue,
+                          onPressed: () async {
+                            await controller.moveCameraToPosition(
+                                33.6392443, 73.278358);
+                          })
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      RaisedButton(
+                          child: Text("Build Route"),
+                          color: Colors.blue,
+                          onPressed: () async {
+                            await controller.buildRoute();
+                          }),
+                      RaisedButton(
+                          child: Text("Navigate"),
+                          color: Colors.blue,
+                          onPressed: () async {
+                            await controller.startNavigation();
+                          })
+                    ],
+                  )
                 ],
               ),
             ),
@@ -72,11 +99,11 @@ class _MyAppState extends State<MyApp> {
         shouldSimulateRoute: true,
         enableRefresh: false,
         zoom: 17.0,
-        tilt: 30.0,
-        bearing: 180.0,
+        tilt: 0.0,
+        bearing: 0.0,
         clientAppName: "MapBox Demo",
-        voiceInstructions: false,
-        bannerInstructions: false,
+        voiceInstructions: true,
+        bannerInstructions: true,
         continueStraight: true,
         profile: "driving-traffic",
         language: "en",

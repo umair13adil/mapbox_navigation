@@ -8,7 +8,7 @@ class MapBoxEventResults {
 
   MapBoxEventResults.fromJson(Map<String, dynamic> json) {
     eventName = json['eventName'];
-    data = jsonDecode(json['data']);
+    data = jsonEncode(json['data']);
   }
 
   Map<String, dynamic> toJson() {
