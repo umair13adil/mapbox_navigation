@@ -27,6 +27,7 @@ import com.mapbox.services.android.navigation.v5.route.FasterRouteListener
 import com.mapbox.services.android.navigation.v5.routeprogress.ProgressChangeListener
 import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress
 import com.umair.mapbox_navigation.R
+import com.umair.mapbox_navigation.models.*
 import com.umair.mapbox_navigation.plugin.FlutterMapViewFactory
 import kotlinx.android.synthetic.main.activity_navigation.*
 import timber.log.Timber
@@ -136,17 +137,46 @@ class NavigationActivity : AppCompatActivity(), OnNavigationReadyCallback,
     }
 
     override fun onProgressChange(location: Location, routeProgress: RouteProgress) {
+
+        EventSendHelper.sendEvent(MapBoxEvents.PROGRESS_CHANGE,
+                ProgressData(
+                        distance = routeProgress.directionsRoute?.distance(),
+                        duration = routeProgress.directionsRoute?.duration(),
+                        distanceTraveled = routeProgress.distanceTraveled(),
+                        legDistanceTraveled = routeProgress.currentLegProgress?.distanceTraveled,
+                        legDistanceRemaining = routeProgress.legDistanceRemaining,
+                        legDurationRemaining = routeProgress.legDurationRemaining,
+                        legIndex = routeProgress.legIndex,
+                        stepIndex = routeProgress.stepIndex
+                ).toString())
+
         if (FlutterMapViewFactory.debug)
             Timber.i(String.format("onProgressChange, %s, %s", "Current Location: ${location.latitude},${location.longitude}",
                     "Distance Remaining: ${routeProgress.currentLegProgress?.distanceRemaining}"))
     }
 
     override fun userOffRoute(location: Location) {
+
+        EventSendHelper.sendEvent(MapBoxEvents.USER_OFF_ROUTE,
+                LocationData(
+                        latitude = location.latitude,
+                        longitude = location.longitude
+                ).toString())
+
         if (FlutterMapViewFactory.debug)
             Timber.i(String.format("userOffRoute, %s", "Current Location: ${location.latitude},${location.longitude}"))
     }
 
     override fun onMilestoneEvent(routeProgress: RouteProgress, instruction: String, milestone: Milestone) {
+
+        EventSendHelper.sendEvent(MapBoxEvents.MILESTONE_EVENT,
+                MileStoneData(
+                        identifier = milestone.identifier,
+                        distanceTraveled = routeProgress.distanceTraveled(),
+                        legIndex = routeProgress.legIndex,
+                        stepIndex = routeProgress.stepIndex
+                ).toString())
+
         if (FlutterMapViewFactory.debug)
             Timber.i(String.format("onMilestoneEvent, %s, %s, %s",
                     "Distance Remaining: ${routeProgress.currentLegProgress?.distanceRemaining}",
@@ -156,59 +186,103 @@ class NavigationActivity : AppCompatActivity(), OnNavigationReadyCallback,
     }
 
     override fun onRunning(running: Boolean) {
+
+        EventSendHelper.sendEvent(MapBoxEvents.NAVIGATION_RUNNING)
+
         if (FlutterMapViewFactory.debug)
             Timber.i(String.format("onRunning, %s", "$running"))
     }
 
     override fun onCancelNavigation() {
+        EventSendHelper.sendEvent(MapBoxEvents.NAVIGATION_CANCELLED)
+
         navigationView.stopNavigation()
         if (FlutterMapViewFactory.debug)
             Timber.i(String.format("onCancelNavigation, %s", ""))
     }
 
     override fun onNavigationFinished() {
+        EventSendHelper.sendEvent(MapBoxEvents.NAVIGATION_FINISHED)
+
         if (FlutterMapViewFactory.debug)
             Timber.i(String.format("onNavigationFinished, %s", ""))
     }
 
     override fun onNavigationRunning() {
+        EventSendHelper.sendEvent(MapBoxEvents.NAVIGATION_RUNNING)
+
         if (FlutterMapViewFactory.debug)
             Timber.i(String.format("onNavigationRunning, %s", ""))
     }
 
     override fun fasterRouteFound(directionsRoute: DirectionsRoute) {
+        EventSendHelper.sendEvent(MapBoxEvents.FASTER_ROUTE_FOUND, directionsRoute.toJson())
+
         if (FlutterMapViewFactory.debug)
             Timber.i(String.format("fasterRouteFound, %s", "New Route Distance: ${directionsRoute.distance()}"))
     }
 
-    override fun willVoice(announcement: SpeechAnnouncement?): SpeechAnnouncement {
-        if (FlutterMapViewFactory.debug)
-            Timber.i(String.format("willVoice, %s", "SpeechAnnouncement: ${announcement?.announcement()}"))
-        return announcement!!
+    override fun willVoice(announcement: SpeechAnnouncement?): SpeechAnnouncement? {
+        return if (FlutterMapViewFactory.voiceInstructions) {
+            EventSendHelper.sendEvent(MapBoxEvents.SPEECH_ANNOUNCEMENT,
+                    "{" +
+                            "  \"data\": \"${announcement?.announcement()}\"" +
+                            "}")
+
+            if (FlutterMapViewFactory.debug)
+                Timber.i(String.format("willVoice, %s", "SpeechAnnouncement: ${announcement?.announcement()}"))
+            announcement
+        } else {
+            null
+        }
     }
 
-    override fun willDisplay(instructions: BannerInstructions?): BannerInstructions {
-        if (FlutterMapViewFactory.debug)
-            Timber.i(String.format("willDisplay, %s", "Instructions: ${instructions?.primary()?.text()}"))
-        return instructions!!
+    override fun willDisplay(instructions: BannerInstructions?): BannerInstructions? {
+        return if (FlutterMapViewFactory.bannerInstructions) {
+            EventSendHelper.sendEvent(MapBoxEvents.BANNER_INSTRUCTION,
+                    "{" +
+                            "  \"data\": \"${instructions?.primary()?.text()}\"" +
+                            "}")
+
+            if (FlutterMapViewFactory.debug)
+                Timber.i(String.format("willDisplay, %s", "Instructions: ${instructions?.primary()?.text()}"))
+            return instructions
+        } else {
+            null
+        }
     }
 
     override fun onArrival() {
+        EventSendHelper.sendEvent(MapBoxEvents.ON_ARRIVAL)
+
         if (FlutterMapViewFactory.debug)
             Timber.i(String.format("onArrival, %s", "Arrived"))
     }
 
     override fun onFailedReroute(errorMessage: String?) {
+        EventSendHelper.sendEvent(MapBoxEvents.FAILED_TO_REROUTE,
+                "{" +
+                        "  \"data\": \"${errorMessage}\"" +
+                        "}")
+
         if (FlutterMapViewFactory.debug)
             Timber.i(String.format("onFailedReroute, %s", errorMessage))
     }
 
     override fun onOffRoute(offRoutePoint: Point?) {
+        EventSendHelper.sendEvent(MapBoxEvents.USER_OFF_ROUTE,
+                LocationData(
+                        latitude = offRoutePoint?.latitude(),
+                        longitude = offRoutePoint?.longitude()
+                ).toString())
+
         if (FlutterMapViewFactory.debug)
             Timber.i(String.format("onOffRoute, %s", "Point: ${offRoutePoint?.latitude()}, ${offRoutePoint?.longitude()}"))
     }
 
     override fun onRerouteAlong(directionsRoute: DirectionsRoute?) {
+        EventSendHelper.sendEvent(MapBoxEvents.REROUTE_ALONG, "${directionsRoute?.toJson()}")
+
         if (FlutterMapViewFactory.debug)
             Timber.i(String.format("onRerouteAlong, %s", "Distance: ${directionsRoute?.distance()}"))
     }
@@ -230,12 +304,12 @@ class NavigationActivity : AppCompatActivity(), OnNavigationReadyCallback,
     }
 
     private fun getDirectionsRoute(): DirectionsRoute {
-        if (FlutterMapViewFactory.testRoute.isNotEmpty()) {
+        return if (FlutterMapViewFactory.testRoute.isNotEmpty()) {
             if (FlutterMapViewFactory.debug)
                 Timber.i(String.format("getDirectionsRoute, %s", "Using Test Route: ${FlutterMapViewFactory.testRoute}"))
-            return DirectionsRoute.fromJson(FlutterMapViewFactory.testRoute.trimIndent())
+            DirectionsRoute.fromJson(FlutterMapViewFactory.testRoute.trimIndent())
         } else {
-            return intent.getSerializableExtra("route") as DirectionsRoute
+            intent.getSerializableExtra("route") as DirectionsRoute
         }
     }
 }

@@ -39,6 +39,8 @@ import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
 import com.umair.mapbox_navigation.MapboxNavigationPlugin
 import com.umair.mapbox_navigation.R
 import com.umair.mapbox_navigation.mapbox.NavigationActivity
+import com.umair.mapbox_navigation.models.EventSendHelper
+import com.umair.mapbox_navigation.models.MapBoxEvents
 import com.umair.mapbox_navigation.utils.*
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -141,8 +143,10 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                 testRoute = getStringValueById("testRoute", methodCall)
                 debug = getBoolValueById("debug", methodCall)
 
-                moveCamera()
-                Timber.i(String.format("showMapView, %s, %s, %s, %s, %s", initialLat, initialLong, originLat, originLong, profile))
+                val location = LatLng(originLat, originLong)
+                moveCamera(location)
+                addCustomMarker(location)
+
                 result.success("MapView options set.")
             }
             "buildRoute" -> {
@@ -192,24 +196,21 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
         }
 
         markerViewManager = MarkerViewManager(mapView, mapBoxMap)
-        moveCamera()
-        //TODO Add more map controls
+        moveCamera(LatLng(initialLat, initialLong))
+
+        EventSendHelper.sendEvent(MapBoxEvents.MAP_READY)
     }
 
-    private fun moveCamera() {
-        val initialLocation = LatLng(initialLat, initialLong)
+    private fun moveCamera(location: LatLng) {
         val cameraPosition = CameraPosition.Builder()
-                .target(initialLocation)
+                .target(location)
                 .zoom(zoom)
                 .bearing(bearing)
                 .tilt(tilt)
                 .build()
 
         mapBoxMap?.animateCamera(CameraUpdateFactory
-                .newCameraPosition(cameraPosition), 7000)
-
-        if (debug)
-            Timber.i(String.format("onMapReady, %s, %s, %s", "Moving camera to: ", initialLat, initialLong))
+                .newCameraPosition(cameraPosition), 3000)
     }
 
     private fun buildRoute(result: MethodChannel.Result) {
@@ -231,7 +232,7 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
         }
 
         val markerView = ImageView(context)
-        markerView.setImageResource(R.drawable.marker_1)
+        markerView.setImageResource(R.drawable.map_marker_dark)
         markerView.layoutParams = ViewGroup.LayoutParams(100, 100)
 
         initialMarkerView = MarkerView(location, markerView)
@@ -269,19 +270,13 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                             return
                         }
                         currentRoute = response.body()!!.routes()[0]
+                        EventSendHelper.sendEvent(MapBoxEvents.ROUTE_BUILT, data = "${response.body()?.toJson()}")
 
                         val originCoordinate = currentRoute?.routeOptions()?.coordinates()?.get(0)
-
                         originCoordinate?.let {
-                            val cameraPosition = CameraPosition.Builder()
-                                    .target(LatLng(originCoordinate.latitude(), originCoordinate.longitude()))
-                                    .zoom(zoom)
-                                    .bearing(bearing)
-                                    .tilt(tilt)
-                                    .build()
-
-                            mapBoxMap?.animateCamera(CameraUpdateFactory
-                                    .newCameraPosition(cameraPosition), 7000)
+                            val location = LatLng(originCoordinate.latitude(), originCoordinate.longitude())
+                            moveCamera(location)
+                            addCustomMarker(location)
                         }
 
                         // Draw the route on the map

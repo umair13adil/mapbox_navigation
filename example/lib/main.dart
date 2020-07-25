@@ -12,10 +12,17 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   MapViewController controller;
+  var mapBox = MapboxNavigation();
 
   @override
   void initState() {
     super.initState();
+    mapBox.init();
+
+    mapBox.getMapBoxEventResults().onData((data) {
+      print(
+          "getMapBoxEventResults: Event: ${data.eventName}\n,Data: ${data.data}");
+    });
   }
 
   @override
@@ -63,8 +70,17 @@ class _MyAppState extends State<MyApp> {
         destinationLat: 33.6392443,
         destinationLong: 73.278358,
         shouldSimulateRoute: true,
+        enableRefresh: false,
+        zoom: 17.0,
+        tilt: 30.0,
+        bearing: 180.0,
+        clientAppName: "MapBox Demo",
+        voiceInstructions: false,
+        bannerInstructions: false,
+        continueStraight: true,
         profile: "driving-traffic",
         language: "en",
+        testRoute: "",
         debug: true));
   }
 }

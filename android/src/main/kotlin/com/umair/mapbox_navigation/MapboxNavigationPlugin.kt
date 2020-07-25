@@ -23,9 +23,6 @@ import timber.log.Timber
 import timber.log.Timber.DebugTree
 
 
-
-
-
 class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.RequestPermissionsResultListener, PlatformView {
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
@@ -108,7 +105,7 @@ class MapboxNavigationPlugin : FlutterPlugin, ActivityAware, PluginRegistry.Requ
 
         @JvmStatic
         private fun doIfPermissionsGranted() {
-            Timber.i(String.format("doIfPermissionsGranted, %s", "Starting Navigation"))
+
         }
 
         @JvmStatic
