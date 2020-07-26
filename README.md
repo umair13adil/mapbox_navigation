@@ -119,7 +119,7 @@ Change your Android Project's *MainActivity* class to following:
             super.onResume()
 
             flutterEngineInstance?.let {
-                MapboxNavigationPlugin.registerWith(it, this, getString(R.string.access_token))
+                MapboxNavigationPlugin.registerWith(it, getString(R.string.access_token))
             }
         }
 
