@@ -1,6 +1,11 @@
-export 'mapbox_options.dart';
-export 'mapbox_map_view.dart';
+export 'models/mapbox_options.dart';
+export 'models/mapbox_location.dart';
+export 'models/mapbox_route_response.dart';
+export 'models/mapbox_event_data.dart';
+export 'models/mapbox_milestone_event.dart';
+export 'models/mapbox_progress_event.dart';
+export 'ui/mapbox_map_view.dart';
 export 'mapbox_navigation_plugin.dart';
-export 'mapbox_event_results.dart';
-export 'mapbox_events.dart';
-export 'mapbox_location.dart';
+export 'events/mapbox_event_results.dart';
+export 'events/mapbox_events.dart';
+export 'events/mapbox_event_provider.dart';

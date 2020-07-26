@@ -1,3 +1,7 @@
+## 1.0.0
+
+* Added MapBox's event POJOs
+
 ## 0.0.2
 
 * Updated ReadMe

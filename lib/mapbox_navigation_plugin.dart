@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
-import 'package:mapbox_navigation/mapbox_event_results.dart';
+import 'package:mapbox_navigation/events/mapbox_event_results.dart';
 
 class MapboxNavigation {
   static const MethodChannel _channel =
@@ -28,7 +28,10 @@ class MapboxNavigation {
   void init() {
     _eventChannel.receiveBroadcastStream().listen((dynamic event) {
       Map result = jsonDecode(event);
-      _mapBoxListenerController.add(MapBoxEventResults.fromJson(result));
+      var res = MapBoxEventResults.fromJson(result);
+      if (res.eventName.isNotEmpty) {
+        _mapBoxListenerController.add(res);
+      }
     }, onError: (dynamic error) {});
   }
 

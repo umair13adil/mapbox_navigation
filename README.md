@@ -51,8 +51,44 @@ dependencies:
         mapBox.init();
 
         mapBox.getMapBoxEventResults().onData((data) {
-        print(
-            "getMapBoxEventResults: Event: ${data.eventName}\n,Data: ${data.data}");
+            print("Event: ${data.eventName}, Data: ${data.data}");
+
+            //Get MapBox Event Type
+            var event = MapBoxEventProvider.getEventType(data.eventName);
+
+            if (event == MapBoxEvent.route_built) {
+
+                var routeResponse = MapBoxRouteResponse.fromJson(jsonDecode(data.data));
+
+                print("Route Distance: ${routeResponse.routes.first.distance},"
+                      "Route Duration: ${routeResponse.routes.first.duration}");
+
+            } else if (event == MapBoxEvent.progress_change) {
+                
+                var progressEvent = MapBoxProgressEvent.fromJson(jsonDecode(data.data));
+
+                print("Leg Distance Remaining: ${progressEvent.legDistanceRemaining},"
+                      "Leg Duration Remaining: ${progressEvent.legDurationRemaining},"
+                      "Distance Travelled: ${progressEvent.distanceTraveled}");
+
+            } else if (event == MapBoxEvent.milestone_event) {
+
+                var mileStoneEvent = MapBoxMileStoneEvent.fromJson(jsonDecode(data.data));
+
+                print("Distance Travelled: ${mileStoneEvent.distanceTraveled}");
+
+            } else if (event == MapBoxEvent.speech_announcement) {
+
+                var speechEvent = MapBoxEventData.fromJson(jsonDecode(data.data));
+
+                print("Speech Text: ${speechEvent.data}");
+
+            } else if (event == MapBoxEvent.banner_instruction) {
+
+                var bannerEvent = MapBoxEventData.fromJson(jsonDecode(data.data));
+
+                print("Banner Text: ${bannerEvent.data}");
+            }
         });
     }
 
@@ -75,7 +111,8 @@ dependencies:
             initialLong: 73.1231471,
             shouldSimulateRoute: true,
             enableRefresh: false,
-            zoom: 17.0,
+            alternatives: true,
+            zoom: 13.0,
             tilt: 0.0,
             bearing: 0.0,
             clientAppName: "MapBox Demo",

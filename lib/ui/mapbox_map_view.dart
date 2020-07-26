@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mapbox_navigation/mapbox_options.dart';
+import 'package:mapbox_navigation/models/mapbox_options.dart';
 
 typedef void MapViewCreatedCallback(MapViewController controller);
 

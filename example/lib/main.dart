@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:mapbox_navigation/mapbox_navigation.dart';
 
@@ -20,8 +22,30 @@ class _MyAppState extends State<MyApp> {
     mapBox.init();
 
     mapBox.getMapBoxEventResults().onData((data) {
-      print(
-          "getMapBoxEventResults: Event: ${data.eventName}\n,Data: ${data.data}");
+      print("Event: ${data.eventName}, Data: ${data.data}");
+
+      var event = MapBoxEventProvider.getEventType(data.eventName);
+
+      if (event == MapBoxEvent.route_built) {
+        var routeResponse = MapBoxRouteResponse.fromJson(jsonDecode(data.data));
+        print("Route Distance: ${routeResponse.routes.first.distance},"
+            "Route Duration: ${routeResponse.routes.first.duration}");
+      } else if (event == MapBoxEvent.progress_change) {
+        var progressEvent = MapBoxProgressEvent.fromJson(jsonDecode(data.data));
+        print("Leg Distance Remaining: ${progressEvent.legDistanceRemaining},"
+            "Leg Duration Remaining: ${progressEvent.legDurationRemaining},"
+            "Distance Travelled: ${progressEvent.distanceTraveled}");
+      } else if (event == MapBoxEvent.milestone_event) {
+        var mileStoneEvent =
+            MapBoxMileStoneEvent.fromJson(jsonDecode(data.data));
+        print("Distance Travelled: ${mileStoneEvent.distanceTraveled}");
+      } else if (event == MapBoxEvent.speech_announcement) {
+        var speechEvent = MapBoxEventData.fromJson(jsonDecode(data.data));
+        print("Speech Text: ${speechEvent.data}");
+      } else if (event == MapBoxEvent.banner_instruction) {
+        var bannerEvent = MapBoxEventData.fromJson(jsonDecode(data.data));
+        print("Banner Text: ${bannerEvent.data}");
+      }
     });
   }
 
@@ -100,16 +124,26 @@ class _MyAppState extends State<MyApp> {
         initialLong: 73.1231471,
         shouldSimulateRoute: true,
         enableRefresh: false,
-        zoom: 17.0,
+        alternatives: true,
+        zoom: 13.0,
         tilt: 0.0,
         bearing: 0.0,
         clientAppName: "MapBox Demo",
         voiceInstructions: true,
         bannerInstructions: true,
-        continueStraight: true,
+        continueStraight: false,
         profile: "driving-traffic",
-        language: "en",
+        language: "ar",
         testRoute: "",
-        debug: true));
+        debug: false));
+  }
+
+  String _prettyPrintJson(String input) {
+    JsonDecoder _decoder = JsonDecoder();
+    JsonEncoder _encoder = JsonEncoder.withIndent('  ');
+    var object = _decoder.convert(input);
+    var prettyString = _encoder.convert(object);
+    prettyString.split('\n').forEach((element) => print(element));
+    return prettyString;
   }
 }
