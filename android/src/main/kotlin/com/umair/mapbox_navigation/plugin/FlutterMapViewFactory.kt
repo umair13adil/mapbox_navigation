@@ -1,21 +1,25 @@
 package com.umair.mapbox_navigation.plugin
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
-import android.graphics.PorterDuff
+import android.location.Location
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.annotation.NonNull
+import com.mapbox.android.core.location.LocationEngine
+import com.mapbox.android.core.location.LocationEngineCallback
+import com.mapbox.android.core.location.LocationEngineResult
 import com.mapbox.android.core.permissions.PermissionsManager
 import com.mapbox.api.directions.v5.DirectionsCriteria
+import com.mapbox.api.directions.v5.models.BannerInstructions
 import com.mapbox.api.directions.v5.models.DirectionsResponse
 import com.mapbox.api.directions.v5.models.DirectionsRoute
-import com.mapbox.api.directions.v5.models.RouteOptions
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
@@ -34,13 +38,29 @@ import com.mapbox.mapboxsdk.style.layers.Property.LINE_CAP_ROUND
 import com.mapbox.mapboxsdk.style.layers.Property.LINE_JOIN_ROUND
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
+import com.mapbox.services.android.navigation.ui.v5.listeners.BannerInstructionsListener
+import com.mapbox.services.android.navigation.ui.v5.listeners.NavigationListener
+import com.mapbox.services.android.navigation.ui.v5.listeners.RouteListener
+import com.mapbox.services.android.navigation.ui.v5.listeners.SpeechAnnouncementListener
 import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute
+import com.mapbox.services.android.navigation.ui.v5.voice.SpeechAnnouncement
+import com.mapbox.services.android.navigation.v5.location.replay.ReplayRouteLocationEngine
+import com.mapbox.services.android.navigation.v5.milestone.Milestone
+import com.mapbox.services.android.navigation.v5.milestone.MilestoneEventListener
+import com.mapbox.services.android.navigation.v5.navigation.MapboxNavigation
+import com.mapbox.services.android.navigation.v5.navigation.MapboxNavigationOptions
+import com.mapbox.services.android.navigation.v5.navigation.NavigationEventListener
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
+import com.mapbox.services.android.navigation.v5.offroute.OffRouteListener
+import com.mapbox.services.android.navigation.v5.route.FasterRouteListener
+import com.mapbox.services.android.navigation.v5.routeprogress.ProgressChangeListener
+import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress
+import com.mapbox.turf.TurfConstants
+import com.mapbox.turf.TurfMeasurement
 import com.umair.mapbox_navigation.MapboxNavigationPlugin
 import com.umair.mapbox_navigation.R
 import com.umair.mapbox_navigation.mapbox.NavigationActivity
-import com.umair.mapbox_navigation.models.EventSendHelper
-import com.umair.mapbox_navigation.models.MapBoxEvents
+import com.umair.mapbox_navigation.models.*
 import com.umair.mapbox_navigation.utils.*
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -51,25 +71,43 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import timber.log.Timber
-import java.util.*
 
 class FlutterMapViewFactory internal constructor(private val context: Context, messenger: BinaryMessenger, id: Int, private val activity: Activity) :
         PlatformView,
         MethodCallHandler,
         Application.ActivityLifecycleCallbacks,
-        OnMapReadyCallback {
+        OnMapReadyCallback,
+        ProgressChangeListener,
+        OffRouteListener,
+        MilestoneEventListener,
+        NavigationEventListener,
+        NavigationListener,
+        FasterRouteListener,
+        SpeechAnnouncementListener,
+        BannerInstructionsListener,
+        RouteListener {
 
     private val methodChannel: MethodChannel = MethodChannel(messenger, MapboxNavigationPlugin.view_name + id)
     private val options: MapboxMapOptions = MapboxMapOptions.createFromAttributes(context)
             .compassEnabled(false)
             .logoEnabled(true)
+    private var locationEngine: LocationEngine? = null
     private var mapView = MapView(context, options)
     private var mapBoxMap: MapboxMap? = null
     private var currentRoute: DirectionsRoute? = null
     private var navigationMapRoute: NavigationMapRoute? = null
+    private val navigationOptions = MapboxNavigationOptions.Builder()
+            .build()
+    private var navigation: MapboxNavigation = MapboxNavigation(
+            context,
+            Mapbox.getAccessToken()!!,
+            navigationOptions
+    )
     private var mapReady = false
     private lateinit var markerViewManager: MarkerViewManager
     private var initialMarkerView: MarkerView? = null
+    private var destination: Point? = null
+    private var waypoint: Point? = null
     private var isDisposed = false
     private var activityHashCode = activity.hashCode()
 
@@ -209,6 +247,8 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
 
         this.mapReady = true
         this.mapBoxMap = mapboxMap1
+        locationEngine = ReplayRouteLocationEngine()
+
         mapBoxMap?.setStyle(context.getString(R.string.navigation_guidance_day)) { style ->
             context.addDestinationIconSymbolLayer(style)
             enableLocationComponent(style)
@@ -277,6 +317,68 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
         }
     }
 
+    private fun addDestination(point: LatLng) {
+        if (destination == null) {
+            destination = Point.fromLngLat(point.longitude, point.latitude)
+        } else if (waypoint == null) {
+            waypoint = Point.fromLngLat(point.longitude, point.latitude)
+        }
+    }
+
+
+    @SuppressLint("MissingPermission")
+    private fun calculateRoute() {
+        locationEngine?.getLastLocation(object : LocationEngineCallback<LocationEngineResult> {
+            override fun onSuccess(result: LocationEngineResult?) {
+                findRouteWith(result)
+            }
+
+            override fun onFailure(exception: Exception) {
+                Timber.e(exception)
+            }
+        })
+    }
+
+    private fun findRouteWith(result: LocationEngineResult?) {
+        result?.let {
+            val userLocation = result.lastLocation
+            if (userLocation == null) {
+                Timber.d("calculateRoute: User location is null, therefore, origin can't be set.")
+                return
+            }
+            destination?.let { destination ->
+                val origin = Point.fromLngLat(userLocation.longitude, userLocation.latitude)
+                if (TurfMeasurement.distance(origin, destination, TurfConstants.UNIT_METERS) < 50) {
+                    return
+                }
+                val navigationRouteBuilder = NavigationRoute.builder(context)
+                        .accessToken(Mapbox.getAccessToken()!!)
+                navigationRouteBuilder.origin(origin)
+                navigationRouteBuilder.destination(destination)
+                if (waypoint != null) {
+                    navigationRouteBuilder.addWaypoint(waypoint!!)
+                }
+                navigationRouteBuilder.enableRefresh(true)
+
+                navigationRouteBuilder.build().getRoute(object : Callback<DirectionsResponse> {
+                    override fun onResponse(call: Call<DirectionsResponse?>, response: Response<DirectionsResponse?>) {
+                        Timber.d("Url: %s", call.request().url().toString())
+                        if (response.body() != null) {
+                            if (response.body()!!.routes().isNotEmpty()) {
+                                this@FlutterMapViewFactory.currentRoute = response.body()!!.routes()[0]
+                                navigationMapRoute?.addRoutes(response.body()!!.routes())
+                            }
+                        }
+                    }
+
+                    override fun onFailure(call: Call<DirectionsResponse?>, throwable: Throwable) {
+                        Timber.e(throwable, "onFailure: navigation.getRoute()")
+                    }
+                })
+            }
+        }
+    }
+
     private fun getRoute(origin: Point, destination: Point, context: Context) {
         NavigationRoute.builder(context)
                 .accessToken(Mapbox.getAccessToken()!!)
@@ -319,9 +421,23 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                         if (navigationMapRoute != null) {
                             navigationMapRoute?.removeRoute()
                         } else {
-                            navigationMapRoute = NavigationMapRoute(null, mapView, mapBoxMap!!, R.style.NavigationMapRoute)
+                            navigationMapRoute = NavigationMapRoute(navigation, mapView, mapBoxMap!!, R.style.NavigationMapRoute)
                         }
                         navigationMapRoute?.addRoute(currentRoute)
+
+                        navigation.addOffRouteListener(this@FlutterMapViewFactory)
+                        navigation.addFasterRouteListener(this@FlutterMapViewFactory)
+                        navigation.addProgressChangeListener(this@FlutterMapViewFactory)
+                        navigation.addMilestoneEventListener(this@FlutterMapViewFactory)
+                        navigation.addNavigationEventListener(this@FlutterMapViewFactory)
+
+                        currentRoute?.let {
+                            if (shouldSimulateRoute) {
+                                (locationEngine as ReplayRouteLocationEngine).assign(it)
+                                navigation.locationEngine = locationEngine as ReplayRouteLocationEngine
+                            }
+                            navigation.startNavigation(it)
+                        }
                     }
 
                     override fun onFailure(call: Call<DirectionsResponse?>, throwable: Throwable) {
@@ -364,6 +480,164 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
         //Timber.i(String.format("onActivityDestroyed, %s, %s, %s", "$activityHashCode", "${activity.hashCode()}", "$isDisposed"))
         //mapView.onDestroy()
     }
+
+    override fun onProgressChange(location: Location, routeProgress: RouteProgress) {
+
+        EventSendHelper.sendEvent(MapBoxEvents.PROGRESS_CHANGE,
+                ProgressData(
+                        distance = routeProgress.directionsRoute?.distance(),
+                        duration = routeProgress.directionsRoute?.duration(),
+                        distanceTraveled = routeProgress.distanceTraveled(),
+                        legDistanceTraveled = routeProgress.currentLegProgress?.distanceTraveled,
+                        legDistanceRemaining = routeProgress.legDistanceRemaining,
+                        legDurationRemaining = routeProgress.legDurationRemaining,
+                        legIndex = routeProgress.legIndex,
+                        stepIndex = routeProgress.stepIndex
+                ).toString())
+
+        if (FlutterMapViewFactory.debug)
+            Timber.i(String.format("onProgressChange, %s, %s", "Current Location: ${location.latitude},${location.longitude}",
+                    "Distance Remaining: ${routeProgress.currentLegProgress?.distanceRemaining}"))
+    }
+
+    override fun userOffRoute(location: Location) {
+
+        EventSendHelper.sendEvent(MapBoxEvents.USER_OFF_ROUTE,
+                LocationData(
+                        latitude = location.latitude,
+                        longitude = location.longitude
+                ).toString())
+
+        if (FlutterMapViewFactory.debug)
+            Timber.i(String.format("userOffRoute, %s", "Current Location: ${location.latitude},${location.longitude}"))
+    }
+
+    override fun onMilestoneEvent(routeProgress: RouteProgress, instruction: String, milestone: Milestone) {
+
+        EventSendHelper.sendEvent(MapBoxEvents.MILESTONE_EVENT,
+                MileStoneData(
+                        identifier = milestone.identifier,
+                        distanceTraveled = routeProgress.distanceTraveled(),
+                        legIndex = routeProgress.legIndex,
+                        stepIndex = routeProgress.stepIndex
+                ).toString())
+
+        if (FlutterMapViewFactory.debug)
+            Timber.i(String.format("onMilestoneEvent, %s, %s, %s",
+                    "Distance Remaining: ${routeProgress.currentLegProgress?.distanceRemaining}",
+                    "Instruction: $instruction",
+                    "Milestone: ${milestone.instruction}"
+            ))
+    }
+
+    override fun onRunning(running: Boolean) {
+
+        EventSendHelper.sendEvent(MapBoxEvents.NAVIGATION_RUNNING)
+
+        if (FlutterMapViewFactory.debug)
+            Timber.i(String.format("onRunning, %s", "$running"))
+    }
+
+    override fun onCancelNavigation() {
+        EventSendHelper.sendEvent(MapBoxEvents.NAVIGATION_CANCELLED)
+
+        navigation.stopNavigation()
+        if (FlutterMapViewFactory.debug)
+            Timber.i(String.format("onCancelNavigation, %s", ""))
+    }
+
+    override fun onNavigationFinished() {
+        EventSendHelper.sendEvent(MapBoxEvents.NAVIGATION_FINISHED)
+
+        if (FlutterMapViewFactory.debug)
+            Timber.i(String.format("onNavigationFinished, %s", ""))
+    }
+
+    override fun onNavigationRunning() {
+        EventSendHelper.sendEvent(MapBoxEvents.NAVIGATION_RUNNING)
+
+        if (FlutterMapViewFactory.debug)
+            Timber.i(String.format("onNavigationRunning, %s", ""))
+    }
+
+    override fun fasterRouteFound(directionsRoute: DirectionsRoute) {
+        EventSendHelper.sendEvent(MapBoxEvents.FASTER_ROUTE_FOUND, directionsRoute.toJson())
+
+        if (FlutterMapViewFactory.debug)
+            Timber.i(String.format("fasterRouteFound, %s", "New Route Distance: ${directionsRoute.distance()}"))
+    }
+
+    override fun willVoice(announcement: SpeechAnnouncement?): SpeechAnnouncement? {
+        return if (FlutterMapViewFactory.voiceInstructions) {
+            EventSendHelper.sendEvent(MapBoxEvents.SPEECH_ANNOUNCEMENT,
+                    "{" +
+                            "  \"data\": \"${announcement?.announcement()}\"" +
+                            "}")
+
+            if (FlutterMapViewFactory.debug)
+                Timber.i(String.format("willVoice, %s", "SpeechAnnouncement: ${announcement?.announcement()}"))
+            announcement
+        } else {
+            null
+        }
+    }
+
+    override fun willDisplay(instructions: BannerInstructions?): BannerInstructions? {
+        return if (FlutterMapViewFactory.bannerInstructions) {
+            EventSendHelper.sendEvent(MapBoxEvents.BANNER_INSTRUCTION,
+                    "{" +
+                            "  \"data\": \"${instructions?.primary()?.text()}\"" +
+                            "}")
+
+            if (FlutterMapViewFactory.debug)
+                Timber.i(String.format("willDisplay, %s", "Instructions: ${instructions?.primary()?.text()}"))
+            return instructions
+        } else {
+            null
+        }
+    }
+
+    override fun onArrival() {
+        EventSendHelper.sendEvent(MapBoxEvents.ON_ARRIVAL)
+
+        if (FlutterMapViewFactory.debug)
+            Timber.i(String.format("onArrival, %s", "Arrived"))
+    }
+
+    override fun onFailedReroute(errorMessage: String?) {
+        EventSendHelper.sendEvent(MapBoxEvents.FAILED_TO_REROUTE,
+                "{" +
+                        "  \"data\": \"${errorMessage}\"" +
+                        "}")
+
+        if (FlutterMapViewFactory.debug)
+            Timber.i(String.format("onFailedReroute, %s", errorMessage))
+    }
+
+    override fun onOffRoute(offRoutePoint: Point?) {
+        EventSendHelper.sendEvent(MapBoxEvents.USER_OFF_ROUTE,
+                LocationData(
+                        latitude = offRoutePoint?.latitude(),
+                        longitude = offRoutePoint?.longitude()
+                ).toString())
+
+        if (FlutterMapViewFactory.debug)
+            Timber.i(String.format("onOffRoute, %s", "Point: ${offRoutePoint?.latitude()}, ${offRoutePoint?.longitude()}"))
+    }
+
+    override fun onRerouteAlong(directionsRoute: DirectionsRoute?) {
+        EventSendHelper.sendEvent(MapBoxEvents.REROUTE_ALONG, "${directionsRoute?.toJson()}")
+
+        if (FlutterMapViewFactory.debug)
+            Timber.i(String.format("onRerouteAlong, %s", "Distance: ${directionsRoute?.distance()}"))
+    }
+
+    override fun allowRerouteFrom(offRoutePoint: Point?): Boolean {
+        if (FlutterMapViewFactory.debug)
+            Timber.i(String.format("allowRerouteFrom, %s", "Point: ${offRoutePoint?.latitude()}, ${offRoutePoint?.longitude()}"))
+        return true
+    }
+
 
     private fun enableLocationComponent(@NonNull loadedMapStyle: Style) {
         if (PermissionsManager.areLocationPermissionsGranted(context)) {
