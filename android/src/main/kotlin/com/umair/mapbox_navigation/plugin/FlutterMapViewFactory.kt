@@ -6,9 +6,13 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.location.Location
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.Animation
+import android.view.animation.LinearInterpolator
+import android.view.animation.RotateAnimation
 import android.widget.ImageView
 import androidx.annotation.DrawableRes
 import androidx.annotation.NonNull
@@ -52,6 +56,8 @@ import com.mapbox.services.android.navigation.v5.routeprogress.ProgressChangeLis
 import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress
 import com.umair.mapbox_navigation.MapboxNavigationPlugin
 import com.umair.mapbox_navigation.R
+import com.umair.mapbox_navigation.mapbox.MapUtils
+import com.umair.mapbox_navigation.mapbox.MapUtils.computeHeading
 import com.umair.mapbox_navigation.mapbox.NavigationActivity
 import com.umair.mapbox_navigation.models.*
 import com.umair.mapbox_navigation.utils.*
@@ -64,7 +70,6 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import timber.log.Timber
-import java.lang.Exception
 
 class FlutterMapViewFactory internal constructor(private val context: Context, messenger: BinaryMessenger, id: Int, private val activity: Activity) :
         PlatformView,
@@ -90,7 +95,7 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
     private var mapView = MapView(context, options)
     private var mapBoxMap: MapboxMap? = null
     private var currentRoute: DirectionsRoute? = null
-    private val routeRefresh = RouteRefresh(Mapbox.getAccessToken()!!);
+    private val routeRefresh = RouteRefresh(Mapbox.getAccessToken()!!)
     private var navigationMapRoute: NavigationMapRoute? = null
     private val navigationOptions = MapboxNavigationOptions.Builder()
             .build()
@@ -102,6 +107,7 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
     private var mapReady = false
     private lateinit var markerViewManager: MarkerViewManager
     private var initialMarkerView: MarkerView? = null
+    private var locationMarkerView: MarkerView? = null
 
     private var isDisposed = false
     private var isRefreshing = false
@@ -141,130 +147,25 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
     override fun onMethodCall(methodCall: MethodCall, result: MethodChannel.Result) {
         when (methodCall.method) {
             "showMapView" -> {
-                getDoubleValueById("initialLat", methodCall).takeIf { it != null }?.let {
-                    initialLat = it
-                }
-                getDoubleValueById("initialLong", methodCall).takeIf { it != null }?.let {
-                    initialLong = it
-                }
-                getDoubleValueById("zoom", methodCall).takeIf { it != null }?.let {
-                    zoom = it
-                }
-                getDoubleValueById("bearing", methodCall).takeIf { it != null }?.let {
-                    bearing = it
-                }
-                getDoubleValueById("tilt", methodCall).takeIf { it != null }?.let {
-                    tilt = it
-                }
-
-                language = getStringValueById("language", methodCall)
-                alternatives = getBoolValueById("alternatives", methodCall)
-                clientAppName = getStringValueById("clientAppName", methodCall)
-                profile = getStringValueById("profile", methodCall)
-                continueStraight = getBoolValueById("continueStraight", methodCall)
-                enableRefresh = getBoolValueById("enableRefresh", methodCall)
-                steps = getBoolValueById("steps", methodCall)
-                voiceInstructions = getBoolValueById("voiceInstructions", methodCall)
-                bannerInstructions = getBoolValueById("bannerInstructions", methodCall)
-                testRoute = getStringValueById("testRoute", methodCall)
-                debug = getBoolValueById("debug", methodCall)
-
-                result.success("MapView options set.")
+                showMapView(methodCall, result)
             }
             "buildRoute" -> {
-                isNavigationCanceled = false
-                getDoubleValueById("originLat", methodCall).takeIf { it != null }?.let {
-                    originLat = it
-                }
-                getDoubleValueById("originLong", methodCall).takeIf { it != null }?.let {
-                    originLong = it
-                }
-                getDoubleValueById("destinationLat", methodCall).takeIf { it != null }?.let {
-                    destinationLat = it
-                }
-                getDoubleValueById("destinationLong", methodCall).takeIf { it != null }?.let {
-                    destinationLong = it
-                }
-                buildRoute(result)
+                buildRoute(methodCall, result)
             }
             "addMarker" -> {
-                val latitude = getDoubleValueById("latitude", methodCall)
-                val longitude = getDoubleValueById("longitude", methodCall)
-
-                if (latitude != null && longitude != null) {
-                    val location = LatLng(latitude, longitude)
-                    addCustomMarker(location, R.drawable.map_marker_dark)
-                    result.success("Marker Added.")
-                } else {
-                    result.success("Unable to add marker, location invalid.")
-                }
+                addMarker(methodCall, result)
             }
             "moveCameraToPosition" -> {
-                val latitude = getDoubleValueById("latitude", methodCall)
-                val longitude = getDoubleValueById("longitude", methodCall)
-
-                if (latitude != null && longitude != null) {
-                    val location = LatLng(latitude, longitude)
-                    moveCamera(location)
-                    result.success("Camera Moved.")
-                } else {
-                    result.success("Unable to move camera, location invalid.")
-                }
+                moveCamera(methodCall, result)
             }
             "startNavigation" -> {
-                isNavigationCanceled = false
-                shouldSimulateRoute = getBoolValueById("shouldSimulateRoute", methodCall)
-                if (currentRoute != null) {
-                    activity.startActivity(Intent(activity, NavigationActivity::class.java).putExtra("route", currentRoute))
-                    result.success("Navigation started.")
-                } else {
-                    result.success("No route found. Unable to start navigation.")
-                }
+                startNavigation(methodCall, result)
             }
             "startEmbeddedNavigation" -> {
-                isNavigationCanceled = false
-                getDoubleValueById("zoom", methodCall).takeIf { it != null }?.let {
-                    zoom = it
-                }
-                getDoubleValueById("bearing", methodCall).takeIf { it != null }?.let {
-                    bearing = it
-                }
-                getDoubleValueById("tilt", methodCall).takeIf { it != null }?.let {
-                    tilt = it
-                }
-                shouldSimulateRoute = getBoolValueById("shouldSimulateRoute", methodCall)
-                if (currentRoute != null) {
-                    navigation.addOffRouteListener(this@FlutterMapViewFactory)
-                    navigation.addFasterRouteListener(this@FlutterMapViewFactory)
-                    navigation.addProgressChangeListener(this@FlutterMapViewFactory)
-                    navigation.addMilestoneEventListener(this@FlutterMapViewFactory)
-                    navigation.addNavigationEventListener(this@FlutterMapViewFactory)
-
-                    currentRoute?.let {
-                        if (shouldSimulateRoute) {
-                            (locationEngine as ReplayRouteLocationEngine).assign(it)
-                            navigation.locationEngine = locationEngine as ReplayRouteLocationEngine
-                        }
-                        navigation.startNavigation(it)
-                    }
-                    result.success("Embedded Navigation started.")
-                } else {
-                    result.success("No route found. Unable to start navigation.")
-                }
+                startEmbeddedNavigation(methodCall, result)
             }
             "stopNavigation" -> {
-                isNavigationCanceled = true
-                if (currentRoute != null) {
-                    navigation.stopNavigation()
-                    navigation.removeFasterRouteListener(this)
-                    navigation.removeMilestoneEventListener(this)
-                    navigation.removeNavigationEventListener(this)
-                    navigation.removeOffRouteListener(this)
-                    navigation.removeProgressChangeListener(this)
-                    result.success("Navigation stopped.")
-                } else {
-                    result.success("No route found. Unable to stop navigation.")
-                }
+                cancelEmbeddedNavigation(methodCall, result)
             }
             else -> result.notImplemented()
         }
@@ -346,7 +247,7 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
         }
     }
 
-    private fun addCustomMarker(location: LatLng, @DrawableRes markerIcon: Int) {
+    private fun addCustomMarker(location: LatLng, @DrawableRes markerIcon: Int, rotationFrom: Double? = null, rotationTo: Double? = null) {
         if (initialMarkerView != null) {
             markerViewManager.removeMarker(initialMarkerView!!)
         }
@@ -355,8 +256,38 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
         markerView.setImageResource(markerIcon)
         markerView.layoutParams = ViewGroup.LayoutParams(100, 100)
 
+        rotationTo?.let {
+            markerView.rotation = rotationTo.toFloat()
+            /*rotationFrom?.let {
+                val rotate = RotateAnimation(rotationFrom.toFloat(), rotationTo.toFloat(), Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f)
+                rotate.duration = 800
+                rotate.interpolator = LinearInterpolator()
+                rotate.isFillEnabled = true
+                //rotate.fillAfter = true
+                markerView.startAnimation(rotate)
+            }*/
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            markerView.elevation = 16.0f
+        }
         initialMarkerView = MarkerView(location, markerView)
         initialMarkerView?.let {
+            markerViewManager.addMarker(it)
+        }
+    }
+
+    private fun addLocationMarker(location: LatLng, @DrawableRes markerIcon: Int) {
+        if (locationMarkerView != null) {
+            markerViewManager.removeMarker(locationMarkerView!!)
+        }
+
+        val markerView = ImageView(context)
+        markerView.setImageResource(markerIcon)
+        markerView.layoutParams = ViewGroup.LayoutParams(100, 100)
+
+        locationMarkerView = MarkerView(location, markerView)
+        locationMarkerView?.let {
             markerViewManager.addMarker(it)
         }
     }
@@ -393,12 +324,7 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                         currentRoute = response.body()!!.routes()[0]
                         EventSendHelper.sendEvent(MapBoxEvents.ROUTE_BUILT, data = "${response.body()?.toJson()}")
 
-                        val originCoordinate = currentRoute?.routeOptions()?.coordinates()?.get(0)
-                        originCoordinate?.let {
-                            val location = LatLng(originCoordinate.latitude(), originCoordinate.longitude())
-                            moveCamera(location)
-                            //addCustomMarker(location)
-                        }
+                        moveCameraToOriginOfRoute()
 
                         // Draw the route on the map
                         if (navigationMapRoute != null) {
@@ -415,6 +341,17 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                 })
     }
 
+    private fun moveCameraToOriginOfRoute() {
+        currentRoute?.let {
+            val originCoordinate = it.routeOptions()?.coordinates()?.get(0)
+            originCoordinate?.let {
+                val location = LatLng(originCoordinate.latitude(), originCoordinate.longitude())
+                moveCamera(location)
+                //addCustomMarker(location)
+            }
+        }
+    }
+
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
         //Timber.i(String.format("onActivityCreated, %s, %s, %s", "$activityHashCode", "${activity.hashCode()}", "$isDisposed"))
         mapView.onCreate(savedInstanceState)
@@ -422,7 +359,11 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
 
     override fun onActivityStarted(activity: Activity) {
         //Timber.i(String.format("onActivityStarted, %s, %s, %s", "$activityHashCode", "${activity.hashCode()}", "$isDisposed"))
-        mapView.onStart()
+        try {
+            mapView.onStart()
+        } catch (e: java.lang.Exception) {
+            Timber.i(String.format("onActivityStarted, %s", "Error: ${e.message}"))
+        }
     }
 
     override fun onActivityResumed(activity: Activity) {
@@ -465,8 +406,51 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
 
     override fun onProgressChange(location: Location, routeProgress: RouteProgress) {
 
+        routeProgress.currentLegProgress?.currentStepPoints
+
         if (shouldSimulateRoute) {
-            addCustomMarker(LatLng(location.latitude, location.longitude), R.drawable.ic_navigation_arrow)
+
+            val upComingStepBearingAfter = routeProgress.currentLegProgress()?.upComingStep?.maneuver()?.bearingAfter()
+            val upComingStepBearingBefore = routeProgress.currentLegProgress()?.upComingStep?.maneuver()?.bearingBefore()
+            val currentStepBearingAfter = routeProgress.currentLegProgress()?.currentStep?.maneuver()?.bearingAfter()
+            val currentStepBearingBefore = routeProgress.currentLegProgress()?.currentStep?.maneuver()?.bearingBefore()
+
+
+            routeProgress.upcomingStepPoints()?.first()?.let {
+                //val heading = MapUtils.computeHeading(LatLng(location.latitude, location.longitude), LatLng(it.latitude(), it.longitude()))
+                //Timber.i(String.format("Heading, %s", "$heading"))
+
+                Timber.i(String.format("Current Info, %s, %s, %s, %s, %s",
+                        "${routeProgress.currentLegProgress()?.currentStep()?.drivingSide()}",
+                        "${routeProgress.currentLegProgress()?.currentStep()?.exits()}",
+                        "${routeProgress.currentLegProgress()?.currentStep()?.distance()}",
+                        "${routeProgress.currentLegProgress()?.currentStep()?.duration()}",
+                        "${routeProgress.currentLegProgress()?.currentStep()?.name()}"
+                ))
+
+                Timber.i(String.format("UpComing Info, %s, %s, %s, %s, %s",
+                        "${routeProgress.currentLegProgress()?.upComingStep()?.drivingSide()}",
+                        "${routeProgress.currentLegProgress()?.upComingStep()?.exits()}",
+                        "${routeProgress.currentLegProgress()?.upComingStep()?.distance()}",
+                        "${routeProgress.currentLegProgress()?.upComingStep()?.duration()}",
+                        "${routeProgress.currentLegProgress()?.upComingStep()?.name()}"
+                ))
+
+                Timber.i(String.format("UpComing, %s, %s",
+                        "Location: ${routeProgress.upcomingStepPoints()?.first()?.latitude()}, ${routeProgress.upcomingStepPoints()?.first()?.longitude()}",
+                        "Current: ${location.latitude}, ${location.longitude}"))
+
+                addCustomMarker(LatLng(location.latitude, location.longitude), R.drawable.mapbox_marker_icon_default)
+            }
+
+            /*Timber.i(String.format("Bearing, %s, %s, %s, %s, %s",
+                    "$upComingStepBearingBefore",
+                    "$upComingStepBearingAfter",
+                    "$currentStepBearingAfter",
+                    "$currentStepBearingBefore",
+                    "${mapView.renderView.rotation}"
+            ))*/
+
             moveCamera(LatLng(location.latitude, location.longitude))
 
             mapBoxMap?.locationComponent?.forceLocationUpdate(location)
@@ -662,6 +646,146 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                     Timber.i(String.format("enableLocationComponent, %s", "Error: ${e.message}"))
                 }
             }
+        }
+    }
+
+    private fun showMapView(methodCall: MethodCall, result: MethodChannel.Result) {
+        getDoubleValueById("initialLat", methodCall).takeIf { it != null }?.let {
+            initialLat = it
+        }
+        getDoubleValueById("initialLong", methodCall).takeIf { it != null }?.let {
+            initialLong = it
+        }
+        getDoubleValueById("zoom", methodCall).takeIf { it != null }?.let {
+            zoom = it
+        }
+        getDoubleValueById("bearing", methodCall).takeIf { it != null }?.let {
+            bearing = it
+        }
+        getDoubleValueById("tilt", methodCall).takeIf { it != null }?.let {
+            tilt = it
+        }
+
+        language = getStringValueById("language", methodCall)
+        alternatives = getBoolValueById("alternatives", methodCall)
+        clientAppName = getStringValueById("clientAppName", methodCall)
+        profile = getStringValueById("profile", methodCall)
+        continueStraight = getBoolValueById("continueStraight", methodCall)
+        enableRefresh = getBoolValueById("enableRefresh", methodCall)
+        steps = getBoolValueById("steps", methodCall)
+        voiceInstructions = getBoolValueById("voiceInstructions", methodCall)
+        bannerInstructions = getBoolValueById("bannerInstructions", methodCall)
+        testRoute = getStringValueById("testRoute", methodCall)
+        debug = getBoolValueById("debug", methodCall)
+
+        result.success("MapView options set.")
+    }
+
+    private fun buildRoute(methodCall: MethodCall, result: MethodChannel.Result) {
+        isNavigationCanceled = false
+        getDoubleValueById("originLat", methodCall).takeIf { it != null }?.let {
+            originLat = it
+        }
+        getDoubleValueById("originLong", methodCall).takeIf { it != null }?.let {
+            originLong = it
+        }
+        getDoubleValueById("destinationLat", methodCall).takeIf { it != null }?.let {
+            destinationLat = it
+        }
+        getDoubleValueById("destinationLong", methodCall).takeIf { it != null }?.let {
+            destinationLong = it
+        }
+        getDoubleValueById("zoom", methodCall).takeIf { it != null }?.let {
+            zoom = it
+        }
+        buildRoute(result)
+    }
+
+    private fun startNavigation(methodCall: MethodCall, result: MethodChannel.Result) {
+        isNavigationCanceled = false
+        shouldSimulateRoute = getBoolValueById("shouldSimulateRoute", methodCall)
+        if (currentRoute != null) {
+            activity.startActivity(Intent(activity, NavigationActivity::class.java).putExtra("route", currentRoute))
+            result.success("Navigation started.")
+        } else {
+            result.success("No route found. Unable to start navigation.")
+        }
+    }
+
+    private fun startEmbeddedNavigation(methodCall: MethodCall, result: MethodChannel.Result) {
+        isNavigationCanceled = false
+        getDoubleValueById("zoom", methodCall).takeIf { it != null }?.let {
+            zoom = it
+        }
+        getDoubleValueById("bearing", methodCall).takeIf { it != null }?.let {
+            bearing = it
+        }
+        getDoubleValueById("tilt", methodCall).takeIf { it != null }?.let {
+            tilt = it
+        }
+        shouldSimulateRoute = getBoolValueById("shouldSimulateRoute", methodCall)
+        if (currentRoute != null) {
+            navigation.addOffRouteListener(this@FlutterMapViewFactory)
+            navigation.addFasterRouteListener(this@FlutterMapViewFactory)
+            navigation.addProgressChangeListener(this@FlutterMapViewFactory)
+            navigation.addMilestoneEventListener(this@FlutterMapViewFactory)
+            navigation.addNavigationEventListener(this@FlutterMapViewFactory)
+
+            currentRoute?.let {
+                if (shouldSimulateRoute) {
+                    (locationEngine as ReplayRouteLocationEngine).assign(it)
+                    navigation.locationEngine = locationEngine as ReplayRouteLocationEngine
+                }
+                navigation.startNavigation(it)
+            }
+            result.success("Embedded Navigation started.")
+        } else {
+            result.success("No route found. Unable to start navigation.")
+        }
+    }
+
+    private fun cancelEmbeddedNavigation(methodCall: MethodCall, result: MethodChannel.Result) {
+        zoom = 15.0
+        bearing = 0.0
+        tilt = 0.0
+        isNavigationCanceled = true
+        moveCameraToOriginOfRoute()
+        if (currentRoute != null) {
+            navigation.stopNavigation()
+            navigation.removeFasterRouteListener(this)
+            navigation.removeMilestoneEventListener(this)
+            navigation.removeNavigationEventListener(this)
+            navigation.removeOffRouteListener(this)
+            navigation.removeProgressChangeListener(this)
+            result.success("Navigation stopped.")
+        } else {
+            result.success("No route found. Unable to stop navigation.")
+        }
+    }
+
+    private fun addMarker(methodCall: MethodCall, result: MethodChannel.Result) {
+        val latitude = getDoubleValueById("latitude", methodCall)
+        val longitude = getDoubleValueById("longitude", methodCall)
+
+        if (latitude != null && longitude != null) {
+            val location = LatLng(latitude, longitude)
+            addCustomMarker(location, R.drawable.map_marker_dark)
+            result.success("Marker Added.")
+        } else {
+            result.success("Unable to add marker, location invalid.")
+        }
+    }
+
+    private fun moveCamera(methodCall: MethodCall, result: MethodChannel.Result) {
+        val latitude = getDoubleValueById("latitude", methodCall)
+        val longitude = getDoubleValueById("longitude", methodCall)
+
+        if (latitude != null && longitude != null) {
+            val location = LatLng(latitude, longitude)
+            moveCamera(location)
+            result.success("Camera Moved.")
+        } else {
+            result.success("Unable to move camera, location invalid.")
         }
     }
 }

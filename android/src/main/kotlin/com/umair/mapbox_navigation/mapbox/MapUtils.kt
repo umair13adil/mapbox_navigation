@@ -89,4 +89,12 @@ object MapUtils {
             }
         }
     }
+
+    fun computeHeading(from: LatLng, to: LatLng): Double {
+        // Compute bearing/heading using Turf and return the value.
+        return TurfMeasurement.bearing(
+                Point.fromLngLat(from.latitude, from.longitude),
+                Point.fromLngLat(to.latitude, to.longitude)
+        )
+    }
 }

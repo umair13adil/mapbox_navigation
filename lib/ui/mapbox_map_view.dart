@@ -72,12 +72,14 @@ class MapViewController {
       {double originLat,
       double originLong,
       double destinationLat,
-      double destinationLong}) async {
+      double destinationLong,
+      double zoom}) async {
     return _channel.invokeMethod('buildRoute', <String, dynamic>{
       'originLat': originLat,
       'originLong': originLong,
       'destinationLat': destinationLat,
-      'destinationLong': destinationLong
+      'destinationLong': destinationLong,
+      'zoom': zoom
     });
   }
 

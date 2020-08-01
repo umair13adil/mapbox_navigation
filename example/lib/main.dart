@@ -95,6 +95,7 @@ class _MyAppState extends State<MyApp> {
                                   RaisedButton(
                                       child: Text("Add Marker"),
                                       color: Colors.blue,
+                                      textColor: Colors.white,
                                       onPressed: () async {
                                         await controller.addMarker(
                                             latitude: 33.569126,
@@ -106,6 +107,7 @@ class _MyAppState extends State<MyApp> {
                                   RaisedButton(
                                       child: Text("Move Camera"),
                                       color: Colors.blue,
+                                      textColor: Colors.white,
                                       onPressed: () async {
                                         await controller.moveCameraToPosition(
                                             latitude: 33.6392443,
@@ -121,28 +123,37 @@ class _MyAppState extends State<MyApp> {
                                   RaisedButton(
                                       child: Text("Build Route"),
                                       color: Colors.blue,
+                                      textColor: Colors.white,
                                       onPressed: () async {
                                         setState(() {
                                           isLoading = true;
                                         });
                                         await controller.buildRoute(
-                                          originLat: 33.569126,
-                                          originLong: 73.1231471,
-                                          destinationLat: 33.6392443,
-                                          destinationLong: 73.278358,
-                                        );
+                                            originLat: 33.569126,
+                                            originLong: 73.1231471,
+                                            destinationLat: 33.6392443,
+                                            destinationLong: 73.278358,
+                                            zoom: 9.5);
                                       }),
                                   RaisedButton(
                                       child: Text("Navigate"),
                                       color: Colors.blue,
+                                      textColor: Colors.white,
                                       onPressed: () async {
-                                        await controller.startNavigation(shouldSimulateRoute: true);
+                                        await controller.startNavigation(
+                                            shouldSimulateRoute: true);
                                       }),
                                   RaisedButton(
                                       child: Text("Navigate Embedded"),
                                       color: Colors.blue,
+                                      textColor: Colors.white,
                                       onPressed: () async {
-                                        await controller.startEmbeddedNavigation(shouldSimulateRoute: true);
+                                        await controller
+                                            .startEmbeddedNavigation(
+                                                zoom: 18.0,
+                                                tilt: 90.0,
+                                                bearing: 50.0,
+                                                shouldSimulateRoute: true);
                                       })
                                 ],
                               )
@@ -151,6 +162,7 @@ class _MyAppState extends State<MyApp> {
                         : RaisedButton(
                             child: Text("Cancel Navigation"),
                             color: Colors.blue,
+                            textColor: Colors.white,
                             onPressed: () async {
                               setState(() {
                                 isRouteInProgress = false;
