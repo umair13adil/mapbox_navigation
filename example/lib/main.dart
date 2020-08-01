@@ -15,6 +15,8 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   MapViewController controller;
   var mapBox = MapboxNavigation();
+  var isLoading = false;
+  var isRouteInProgress = false;
 
   @override
   void initState() {
@@ -27,14 +29,22 @@ class _MyAppState extends State<MyApp> {
       var event = MapBoxEventProvider.getEventType(data.eventName);
 
       if (event == MapBoxEvent.route_built) {
+        setState(() {
+          isLoading = false;
+        });
         var routeResponse = MapBoxRouteResponse.fromJson(jsonDecode(data.data));
         print("Route Distance: ${routeResponse.routes.first.distance},"
             "Route Duration: ${routeResponse.routes.first.duration}");
       } else if (event == MapBoxEvent.progress_change) {
+        setState(() {
+          isRouteInProgress = true;
+        });
         var progressEvent = MapBoxProgressEvent.fromJson(jsonDecode(data.data));
         print("Leg Distance Remaining: ${progressEvent.legDistanceRemaining},"
             "Leg Duration Remaining: ${progressEvent.legDurationRemaining},"
-            "Distance Travelled: ${progressEvent.distanceTraveled}");
+            "Distance Travelled: ${progressEvent.distanceTraveled},"
+            "Voice Instruction: ${progressEvent.voiceInstruction},"
+            "Banner Instruction: ${progressEvent.bannerInstruction}");
       } else if (event == MapBoxEvent.milestone_event) {
         var mileStoneEvent =
             MapBoxMileStoneEvent.fromJson(jsonDecode(data.data));
@@ -45,6 +55,18 @@ class _MyAppState extends State<MyApp> {
       } else if (event == MapBoxEvent.banner_instruction) {
         var bannerEvent = MapBoxEventData.fromJson(jsonDecode(data.data));
         print("Banner Text: ${bannerEvent.data}");
+      } else if (event == MapBoxEvent.navigation_cancelled) {
+        setState(() {
+          isRouteInProgress = false;
+        });
+      } else if (event == MapBoxEvent.navigation_finished) {
+        setState(() {
+          isRouteInProgress = false;
+        });
+      } else if (event == MapBoxEvent.on_arrival) {
+        setState(() {
+          isRouteInProgress = false;
+        });
       }
     });
   }
@@ -59,58 +81,87 @@ class _MyAppState extends State<MyApp> {
         body: Stack(
           children: <Widget>[
             MapBoxMapView(onMapViewCreated: _onMapViewCreated),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Column(
-                children: <Widget>[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      RaisedButton(
-                          child: Text("Add Marker"),
-                          color: Colors.blue,
-                          onPressed: () async {
-                            await controller.addMarker(
-                                latitude: 33.569126, longitude: 73.1231471);
-                            await controller.moveCameraToPosition(
-                                latitude: 33.569126, longitude: 73.1231471);
-                          }),
-                      RaisedButton(
-                          child: Text("Move Camera"),
-                          color: Colors.blue,
-                          onPressed: () async {
-                            await controller.moveCameraToPosition(
-                                latitude: 33.6392443, longitude: 73.278358);
-                          })
-                    ],
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      RaisedButton(
-                          child: Text("Build Route"),
-                          color: Colors.blue,
-                          onPressed: () async {
-                            await controller.buildRoute(
-                              originLat: 33.569126,
-                              originLong: 73.1231471,
-                              destinationLat: 33.6392443,
-                              destinationLong: 73.278358,
-                            );
-                          }),
-                      RaisedButton(
-                          child: Text("Navigate"),
-                          color: Colors.blue,
-                          onPressed: () async {
-                            await controller.startNavigation();
-                          })
-                    ],
+            !isLoading
+                ? Align(
+                    alignment: Alignment.bottomCenter,
+                    child: !isRouteInProgress
+                        ? Column(
+                            children: <Widget>[
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: <Widget>[
+                                  RaisedButton(
+                                      child: Text("Add Marker"),
+                                      color: Colors.blue,
+                                      onPressed: () async {
+                                        await controller.addMarker(
+                                            latitude: 33.569126,
+                                            longitude: 73.1231471);
+                                        await controller.moveCameraToPosition(
+                                            latitude: 33.569126,
+                                            longitude: 73.1231471);
+                                      }),
+                                  RaisedButton(
+                                      child: Text("Move Camera"),
+                                      color: Colors.blue,
+                                      onPressed: () async {
+                                        await controller.moveCameraToPosition(
+                                            latitude: 33.6392443,
+                                            longitude: 73.278358);
+                                      })
+                                ],
+                              ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: <Widget>[
+                                  RaisedButton(
+                                      child: Text("Build Route"),
+                                      color: Colors.blue,
+                                      onPressed: () async {
+                                        setState(() {
+                                          isLoading = true;
+                                        });
+                                        await controller.buildRoute(
+                                          originLat: 33.569126,
+                                          originLong: 73.1231471,
+                                          destinationLat: 33.6392443,
+                                          destinationLong: 73.278358,
+                                        );
+                                      }),
+                                  RaisedButton(
+                                      child: Text("Navigate"),
+                                      color: Colors.blue,
+                                      onPressed: () async {
+                                        await controller.startNavigation(shouldSimulateRoute: true);
+                                      }),
+                                  RaisedButton(
+                                      child: Text("Navigate Embedded"),
+                                      color: Colors.blue,
+                                      onPressed: () async {
+                                        await controller.startEmbeddedNavigation(shouldSimulateRoute: true);
+                                      })
+                                ],
+                              )
+                            ],
+                          )
+                        : RaisedButton(
+                            child: Text("Cancel Navigation"),
+                            color: Colors.blue,
+                            onPressed: () async {
+                              setState(() {
+                                isRouteInProgress = false;
+                                isLoading = false;
+                              });
+                              await controller.stopNavigation();
+                            }),
                   )
-                ],
-              ),
-            ),
+                : Align(
+                    alignment: Alignment.center,
+                    child: CircularProgressIndicator()),
           ],
         ),
       ),
@@ -122,8 +173,7 @@ class _MyAppState extends State<MyApp> {
     await controller.showMap(MapBoxOptions(
         initialLat: 33.569126,
         initialLong: 73.1231471,
-        shouldSimulateRoute: true,
-        enableRefresh: false,
+        enableRefresh: true,
         alternatives: true,
         zoom: 13.0,
         tilt: 0.0,
@@ -133,7 +183,7 @@ class _MyAppState extends State<MyApp> {
         bannerInstructions: true,
         continueStraight: false,
         profile: "driving-traffic",
-        language: "ar",
+        language: "en",
         testRoute: "",
         debug: false));
   }

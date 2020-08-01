@@ -7,6 +7,8 @@ data class ProgressData(
         val legDistanceTraveled: Double?,
         val legDistanceRemaining: Double?,
         val legDurationRemaining: Double?,
+        var voiceInstruction: String?,
+        var bannerInstruction: String?,
         var legIndex: Int?,
         var stepIndex: Int?
 ) {
@@ -18,6 +20,8 @@ data class ProgressData(
                 "  \"legDistanceTraveled\": \"$legDistanceTraveled\"," +
                 "  \"legDistanceRemaining\": \"$legDistanceRemaining\"," +
                 "  \"legDurationRemaining\": \"$legDurationRemaining\"," +
+                "  \"voiceInstruction\": \"$voiceInstruction\"," +
+                "  \"bannerInstruction\": \"$bannerInstruction\"," +
                 "  \"legIndex\": \"$legIndex\"," +
                 "  \"stepIndex\": \"$stepIndex\"" +
                 "}"

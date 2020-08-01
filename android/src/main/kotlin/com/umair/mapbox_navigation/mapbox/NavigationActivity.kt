@@ -146,6 +146,8 @@ class NavigationActivity : AppCompatActivity(), OnNavigationReadyCallback,
                         legDistanceTraveled = routeProgress.currentLegProgress?.distanceTraveled,
                         legDistanceRemaining = routeProgress.legDistanceRemaining,
                         legDurationRemaining = routeProgress.legDurationRemaining,
+                        voiceInstruction = routeProgress.voiceInstruction?.announcement,
+                        bannerInstruction = routeProgress.bannerInstruction?.primary?.text,
                         legIndex = routeProgress.legIndex,
                         stepIndex = routeProgress.stepIndex
                 ).toString())

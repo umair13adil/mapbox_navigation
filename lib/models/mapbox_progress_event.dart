@@ -5,6 +5,8 @@ class MapBoxProgressEvent {
   String legDistanceTraveled;
   String legDistanceRemaining;
   String legDurationRemaining;
+  String voiceInstruction;
+  String bannerInstruction;
   String legIndex;
   String stepIndex;
 
@@ -15,6 +17,8 @@ class MapBoxProgressEvent {
         this.legDistanceTraveled,
         this.legDistanceRemaining,
         this.legDurationRemaining,
+        this.voiceInstruction,
+        this.bannerInstruction,
         this.legIndex,
         this.stepIndex});
 
@@ -25,6 +29,8 @@ class MapBoxProgressEvent {
     legDistanceTraveled = json['legDistanceTraveled'];
     legDistanceRemaining = json['legDistanceRemaining'];
     legDurationRemaining = json['legDurationRemaining'];
+    voiceInstruction = json['voiceInstruction'];
+    bannerInstruction = json['bannerInstruction'];
     legIndex = json['legIndex'];
     stepIndex = json['stepIndex'];
   }
@@ -37,6 +43,8 @@ class MapBoxProgressEvent {
     data['legDistanceTraveled'] = this.legDistanceTraveled;
     data['legDistanceRemaining'] = this.legDistanceRemaining;
     data['legDurationRemaining'] = this.legDurationRemaining;
+    data['voiceInstruction'] = this.voiceInstruction;
+    data['bannerInstruction'] = this.bannerInstruction;
     data['legIndex'] = this.legIndex;
     data['stepIndex'] = this.stepIndex;
     return data;

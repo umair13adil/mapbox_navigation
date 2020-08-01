@@ -51,7 +51,6 @@ class MapViewController {
     return _channel.invokeMethod('showMapView', <String, dynamic>{
       'initialLat': options.initialLat,
       'initialLong': options.initialLong,
-      'shouldSimulateRoute': options.shouldSimulateRoute,
       'language': options.language,
       'zoom': options.zoom,
       'bearing': options.bearing,
@@ -82,8 +81,27 @@ class MapViewController {
     });
   }
 
-  Future<String> startNavigation() async {
-    return _channel.invokeMethod('startNavigation');
+  Future<String> startNavigation({bool shouldSimulateRoute}) async {
+    return _channel.invokeMethod('startNavigation',
+        <String, dynamic>{'shouldSimulateRoute': shouldSimulateRoute});
+  }
+
+  Future<String> startEmbeddedNavigation({
+    bool shouldSimulateRoute,
+    double zoom: 16.0,
+    double tilt: 80.0,
+    double bearing: 30.0,
+  }) async {
+    return _channel.invokeMethod('startEmbeddedNavigation', <String, dynamic>{
+      'shouldSimulateRoute': shouldSimulateRoute,
+      'zoom': zoom,
+      'bearing': bearing,
+      'tilt': tilt
+    });
+  }
+
+  Future<String> stopNavigation() async {
+    return _channel.invokeMethod('stopNavigation');
   }
 
   Future<String> addMarker({double latitude, double longitude}) async {
@@ -93,7 +111,8 @@ class MapViewController {
     });
   }
 
-  Future<String> moveCameraToPosition({double latitude, double longitude}) async {
+  Future<String> moveCameraToPosition(
+      {double latitude, double longitude}) async {
     return _channel.invokeMethod('moveCameraToPosition', <String, dynamic>{
       'latitude': latitude,
       'longitude': longitude,
