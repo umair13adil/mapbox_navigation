@@ -9,6 +9,10 @@ Overview
 
 This plugin is developed to use advance features of MapBox for Flutter apps. This plugin provides all the basic features of MapBox along with some useful callbacks.
 
+![Image1](pictures/picture_route.png)
+![Image2](pictures/picture_navigation_builtin.png)
+![Image3](pictures/picture_navigation_embedded.png)
+
 Features
 --------
 
@@ -17,7 +21,8 @@ Features
 - Add markers on Map
 - Move camera to location on Map
 - Draw route on Map
-- Start Navigation
+- Start Navigation (Built-In)
+- Start Navigation (Embedded)
 - Simulate Route Option
 - Listen to Navigation Events
 - Listen to User Off Route Event
@@ -109,7 +114,6 @@ dependencies:
         await controller.showMap(MapBoxOptions(
             initialLat: 33.569126,
             initialLong: 73.1231471,
-            shouldSimulateRoute: true,
             enableRefresh: false,
             alternatives: true,
             zoom: 13.0,
@@ -186,15 +190,28 @@ This will build route based on origin & destination values provided.
         originLong: 73.1231471,
         destinationLat: 33.6392443,
         destinationLong: 73.278358,
+        zoom: 9.5
     );
 ```
 
-### Start Navigation:
+### Start Navigation (Built-In):
 
 This will start navigation based on route fetched using 'buildRoute' method.
 
 ```dart
-    await controller.startNavigation();
+    await controller.startNavigation(shouldSimulateRoute: true);
+```
+
+### Start Navigation (Embedded):
+
+This will start navigation on the MapBox's MapView without opening seperate screen.
+
+```dart
+    await controller.startEmbeddedNavigation(
+                        zoom: 18.0,
+                        tilt: 90.0,
+                        bearing: 50.0,
+                        shouldSimulateRoute: false);
 ```
 
 ### Add Marker:

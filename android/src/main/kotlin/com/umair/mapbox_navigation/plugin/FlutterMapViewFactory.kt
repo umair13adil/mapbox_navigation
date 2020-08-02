@@ -411,7 +411,8 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
 
         moveCamera(LatLng(location.latitude, location.longitude))
 
-        mapBoxMap?.locationComponent?.forceLocationUpdate(location)
+        if (shouldSimulateRoute)
+            mapBoxMap?.locationComponent?.forceLocationUpdate(location)
 
         if (!isRefreshing) {
             isRefreshing = true
