@@ -9,9 +9,13 @@ Overview
 
 This plugin is developed to use advance features of MapBox for Flutter apps. This plugin provides all the basic features of MapBox along with some useful callbacks.
 
-![Image1](pictures/picture_route.png)
-![Image2](pictures/picture_navigation_builtin.png)
-![Image3](pictures/picture_navigation_embedded.png)
+<table style="padding:10px">
+  <tr>
+    <td><img src="./pictures/picture_route.png"  alt="1" width = 279px height = 350px ></td>
+    <td><img src="./pictures/picture_navigation_builtin.png" align="right" alt="2" width = 279px height = 350px></td>
+    <td><img src="./pictures/picture_navigation_embedded.png" alt="3" width = 288px height = 350px></td>
+  </tr>
+</table>
 
 Features
 --------
