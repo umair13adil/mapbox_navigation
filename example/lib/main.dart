@@ -24,7 +24,7 @@ class _MyAppState extends State<MyApp> {
     mapBox.init();
 
     mapBox.getMapBoxEventResults().onData((data) {
-      print("Event: ${data.eventName}, Data: ${data.data}");
+      //print("Event: ${data.eventName}, Data: ${data.data}");
 
       var event = MapBoxEventProvider.getEventType(data.eventName);
 
@@ -153,7 +153,7 @@ class _MyAppState extends State<MyApp> {
                                                 zoom: 18.0,
                                                 tilt: 90.0,
                                                 bearing: 50.0,
-                                                shouldSimulateRoute: true);
+                                                shouldSimulateRoute: false);
                                       })
                                 ],
                               )

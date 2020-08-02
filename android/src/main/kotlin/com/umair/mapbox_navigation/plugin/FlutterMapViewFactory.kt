@@ -10,9 +10,6 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.Animation
-import android.view.animation.LinearInterpolator
-import android.view.animation.RotateAnimation
 import android.widget.ImageView
 import androidx.annotation.DrawableRes
 import androidx.annotation.NonNull
@@ -57,9 +54,11 @@ import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress
 import com.umair.mapbox_navigation.MapboxNavigationPlugin
 import com.umair.mapbox_navigation.R
 import com.umair.mapbox_navigation.mapbox.MapUtils
-import com.umair.mapbox_navigation.mapbox.MapUtils.computeHeading
 import com.umair.mapbox_navigation.mapbox.NavigationActivity
-import com.umair.mapbox_navigation.models.*
+import com.umair.mapbox_navigation.models.EventSendHelper
+import com.umair.mapbox_navigation.models.LocationData
+import com.umair.mapbox_navigation.models.MapBoxEvents
+import com.umair.mapbox_navigation.models.MileStoneData
 import com.umair.mapbox_navigation.utils.*
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -406,78 +405,18 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
 
     override fun onProgressChange(location: Location, routeProgress: RouteProgress) {
 
-        routeProgress.currentLegProgress?.currentStepPoints
+        MapUtils.doOnProgressChange(location, routeProgress)
 
-        if (shouldSimulateRoute) {
+        addCustomMarker(LatLng(location.latitude, location.longitude), R.drawable.mapbox_marker_icon_default)
 
-            val upComingStepBearingAfter = routeProgress.currentLegProgress()?.upComingStep?.maneuver()?.bearingAfter()
-            val upComingStepBearingBefore = routeProgress.currentLegProgress()?.upComingStep?.maneuver()?.bearingBefore()
-            val currentStepBearingAfter = routeProgress.currentLegProgress()?.currentStep?.maneuver()?.bearingAfter()
-            val currentStepBearingBefore = routeProgress.currentLegProgress()?.currentStep?.maneuver()?.bearingBefore()
+        moveCamera(LatLng(location.latitude, location.longitude))
 
+        mapBoxMap?.locationComponent?.forceLocationUpdate(location)
 
-            routeProgress.upcomingStepPoints()?.first()?.let {
-                //val heading = MapUtils.computeHeading(LatLng(location.latitude, location.longitude), LatLng(it.latitude(), it.longitude()))
-                //Timber.i(String.format("Heading, %s", "$heading"))
-
-                Timber.i(String.format("Current Info, %s, %s, %s, %s, %s",
-                        "${routeProgress.currentLegProgress()?.currentStep()?.drivingSide()}",
-                        "${routeProgress.currentLegProgress()?.currentStep()?.exits()}",
-                        "${routeProgress.currentLegProgress()?.currentStep()?.distance()}",
-                        "${routeProgress.currentLegProgress()?.currentStep()?.duration()}",
-                        "${routeProgress.currentLegProgress()?.currentStep()?.name()}"
-                ))
-
-                Timber.i(String.format("UpComing Info, %s, %s, %s, %s, %s",
-                        "${routeProgress.currentLegProgress()?.upComingStep()?.drivingSide()}",
-                        "${routeProgress.currentLegProgress()?.upComingStep()?.exits()}",
-                        "${routeProgress.currentLegProgress()?.upComingStep()?.distance()}",
-                        "${routeProgress.currentLegProgress()?.upComingStep()?.duration()}",
-                        "${routeProgress.currentLegProgress()?.upComingStep()?.name()}"
-                ))
-
-                Timber.i(String.format("UpComing, %s, %s",
-                        "Location: ${routeProgress.upcomingStepPoints()?.first()?.latitude()}, ${routeProgress.upcomingStepPoints()?.first()?.longitude()}",
-                        "Current: ${location.latitude}, ${location.longitude}"))
-
-                addCustomMarker(LatLng(location.latitude, location.longitude), R.drawable.mapbox_marker_icon_default)
-            }
-
-            /*Timber.i(String.format("Bearing, %s, %s, %s, %s, %s",
-                    "$upComingStepBearingBefore",
-                    "$upComingStepBearingAfter",
-                    "$currentStepBearingAfter",
-                    "$currentStepBearingBefore",
-                    "${mapView.renderView.rotation}"
-            ))*/
-
-            moveCamera(LatLng(location.latitude, location.longitude))
-
-            mapBoxMap?.locationComponent?.forceLocationUpdate(location)
-
-            if (!isRefreshing) {
-                isRefreshing = true
-                routeRefresh.refresh(routeProgress, this)
-            }
+        if (!isRefreshing) {
+            isRefreshing = true
+            routeRefresh.refresh(routeProgress, this)
         }
-
-        EventSendHelper.sendEvent(MapBoxEvents.PROGRESS_CHANGE,
-                ProgressData(
-                        distance = routeProgress.directionsRoute?.distance(),
-                        duration = routeProgress.directionsRoute?.duration(),
-                        distanceTraveled = routeProgress.distanceTraveled(),
-                        legDistanceTraveled = routeProgress.currentLegProgress?.distanceTraveled,
-                        legDistanceRemaining = routeProgress.legDistanceRemaining,
-                        legDurationRemaining = routeProgress.legDurationRemaining,
-                        voiceInstruction = routeProgress.voiceInstruction?.announcement,
-                        bannerInstruction = routeProgress.bannerInstruction?.primary?.text,
-                        legIndex = routeProgress.legIndex,
-                        stepIndex = routeProgress.stepIndex
-                ).toString())
-
-        if (debug)
-            Timber.i(String.format("onProgressChange, %s, %s", "Current Location: ${location.latitude},${location.longitude}",
-                    "Distance Remaining: ${routeProgress.currentLegProgress?.distanceRemaining}"))
     }
 
     override fun userOffRoute(location: Location) {

@@ -2,6 +2,7 @@ package com.umair.mapbox_navigation.mapbox
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.location.Location
 import com.mapbox.android.core.location.LocationEngine
 import com.mapbox.android.core.location.LocationEngineCallback
 import com.mapbox.android.core.location.LocationEngineResult
@@ -12,8 +13,14 @@ import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.geometry.LatLng
 import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
+import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress
 import com.mapbox.turf.TurfConstants
 import com.mapbox.turf.TurfMeasurement
+import com.umair.mapbox_navigation.R
+import com.umair.mapbox_navigation.models.EventSendHelper
+import com.umair.mapbox_navigation.models.MapBoxEvents
+import com.umair.mapbox_navigation.models.ProgressData
+import com.umair.mapbox_navigation.plugin.FlutterMapViewFactory
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -96,5 +103,46 @@ object MapUtils {
                 Point.fromLngLat(from.latitude, from.longitude),
                 Point.fromLngLat(to.latitude, to.longitude)
         )
+    }
+    
+    fun doOnProgressChange(location: Location, routeProgress: RouteProgress){
+        val upComingStepBearingAfter = routeProgress.currentLegProgress()?.upComingStep?.maneuver()?.bearingAfter()
+        val upComingStepBearingBefore = routeProgress.currentLegProgress()?.upComingStep?.maneuver()?.bearingBefore()
+        val currentStepBearingAfter = routeProgress.currentLegProgress()?.currentStep?.maneuver()?.bearingAfter()
+        val currentStepBearingBefore = routeProgress.currentLegProgress()?.currentStep?.maneuver()?.bearingBefore()
+
+        EventSendHelper.sendEvent(MapBoxEvents.PROGRESS_CHANGE,
+                ProgressData(
+                        currentLatitude = location.latitude,
+                        currentLongitude = location.longitude,
+                        upcomingLatitude = routeProgress.upcomingStepPoints()?.first()?.latitude(),
+                        upcomingLongitude = routeProgress.upcomingStepPoints()?.first()?.longitude(),
+                        distanceTraveled = routeProgress.distanceTraveled(),
+                        legDistanceTraveled = routeProgress.currentLegProgress?.distanceTraveled,
+                        legDistanceRemaining = routeProgress.legDistanceRemaining,
+                        legDurationRemaining = routeProgress.legDurationRemaining,
+                        voiceInstruction = routeProgress.voiceInstruction?.announcement,
+                        bannerInstruction = routeProgress.bannerInstruction?.primary?.text,
+                        legIndex = routeProgress.legIndex,
+                        stepIndex = routeProgress.stepIndex,
+                        currentStepBearingAfter = currentStepBearingAfter,
+                        currentStepBearingBefore = currentStepBearingBefore,
+                        currentStepDrivingSide = routeProgress.currentLegProgress()?.currentStep()?.drivingSide(),
+                        currentStepExits = routeProgress.currentLegProgress()?.currentStep()?.exits(),
+                        currentStepDistance = routeProgress.currentLegProgress()?.currentStep()?.distance(),
+                        currentStepDuration = routeProgress.currentLegProgress()?.currentStep()?.duration(),
+                        currentStepName = routeProgress.currentLegProgress()?.currentStep()?.name(),
+                        upComingStepBearingAfter = upComingStepBearingAfter,
+                        upComingStepBearingBefore = upComingStepBearingBefore,
+                        upComingStepDrivingSide = routeProgress.currentLegProgress()?.upComingStep()?.drivingSide(),
+                        upComingStepExits = routeProgress.currentLegProgress()?.upComingStep()?.exits(),
+                        upComingStepDistance = routeProgress.currentLegProgress()?.upComingStep()?.distance(),
+                        upComingStepDuration = routeProgress.currentLegProgress()?.upComingStep()?.duration(),
+                        upComingStepName = routeProgress.currentLegProgress()?.upComingStep()?.name()
+                ).toString())
+
+        if (FlutterMapViewFactory.debug)
+            Timber.i(String.format("onProgressChange, %s, %s", "Current Location: ${location.latitude},${location.longitude}",
+                    "Distance Remaining: ${routeProgress.currentLegProgress?.distanceRemaining}"))
     }
 }

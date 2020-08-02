@@ -137,24 +137,7 @@ class NavigationActivity : AppCompatActivity(), OnNavigationReadyCallback,
     }
 
     override fun onProgressChange(location: Location, routeProgress: RouteProgress) {
-
-        EventSendHelper.sendEvent(MapBoxEvents.PROGRESS_CHANGE,
-                ProgressData(
-                        distance = routeProgress.directionsRoute?.distance(),
-                        duration = routeProgress.directionsRoute?.duration(),
-                        distanceTraveled = routeProgress.distanceTraveled(),
-                        legDistanceTraveled = routeProgress.currentLegProgress?.distanceTraveled,
-                        legDistanceRemaining = routeProgress.legDistanceRemaining,
-                        legDurationRemaining = routeProgress.legDurationRemaining,
-                        voiceInstruction = routeProgress.voiceInstruction?.announcement,
-                        bannerInstruction = routeProgress.bannerInstruction?.primary?.text,
-                        legIndex = routeProgress.legIndex,
-                        stepIndex = routeProgress.stepIndex
-                ).toString())
-
-        if (FlutterMapViewFactory.debug)
-            Timber.i(String.format("onProgressChange, %s, %s", "Current Location: ${location.latitude},${location.longitude}",
-                    "Distance Remaining: ${routeProgress.currentLegProgress?.distanceRemaining}"))
+        MapUtils.doOnProgressChange(location, routeProgress)
     }
 
     override fun userOffRoute(location: Location) {
