@@ -13,13 +13,13 @@ This plugin is developed to use advance features of MapBox for Flutter apps. Thi
   <tr>
     <td>
     <h5>Generate Route</h5>
-    <img src="./pictures/picture_route.png"  alt="1" width = 279px height = 450px ></td>
+    <img src="./pictures/picture_route.png"  alt="1" width = 279px height = 496px ></td>
     <td>
     <h5>Built-in Navigation</h5>
-    <img src="./pictures/picture_navigation_builtin.png" align="right" alt="2" width = 279px height = 450px></td>
+    <img src="./pictures/picture_navigation_builtin.png" align="right" alt="2" width = 279px height = 496px></td>
     <td>
     <h5>Embedded Navigation</h5>
-    <img src="./pictures/picture_navigation_embedded.png" alt="3" width = 288px height = 450px></td>
+    <img src="./pictures/picture_navigation_embedded.png" alt="3" width = 288px height = 496px></td>
   </tr>
 </table>
 
