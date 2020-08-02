@@ -1,3 +1,9 @@
+## 1.0.1
+
+* Added Embedded MabBox Navigation Feature
+* Updated MapBoxProgressEvent data class
+* Updated ReadMe
+
 ## 1.0.0
 
 * Added MapBox's event POJOs
