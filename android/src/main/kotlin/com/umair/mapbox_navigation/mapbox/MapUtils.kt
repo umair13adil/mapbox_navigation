@@ -104,45 +104,54 @@ object MapUtils {
                 Point.fromLngLat(to.latitude, to.longitude)
         )
     }
-    
-    fun doOnProgressChange(location: Location, routeProgress: RouteProgress){
+
+    fun doOnProgressChange(location: Location, routeProgress: RouteProgress) {
         val upComingStepBearingAfter = routeProgress.currentLegProgress()?.upComingStep?.maneuver()?.bearingAfter()
         val upComingStepBearingBefore = routeProgress.currentLegProgress()?.upComingStep?.maneuver()?.bearingBefore()
         val currentStepBearingAfter = routeProgress.currentLegProgress()?.currentStep?.maneuver()?.bearingAfter()
         val currentStepBearingBefore = routeProgress.currentLegProgress()?.currentStep?.maneuver()?.bearingBefore()
 
-        EventSendHelper.sendEvent(MapBoxEvents.PROGRESS_CHANGE,
-                ProgressData(
-                        currentLatitude = location.latitude,
-                        currentLongitude = location.longitude,
-                        upcomingLatitude = routeProgress.upcomingStepPoints()?.first()?.latitude(),
-                        upcomingLongitude = routeProgress.upcomingStepPoints()?.first()?.longitude(),
-                        distanceTraveled = routeProgress.distanceTraveled(),
-                        legDistanceTraveled = routeProgress.currentLegProgress?.distanceTraveled,
-                        legDistanceRemaining = routeProgress.legDistanceRemaining,
-                        legDurationRemaining = routeProgress.legDurationRemaining,
-                        voiceInstruction = routeProgress.voiceInstruction?.announcement,
-                        bannerInstruction = routeProgress.bannerInstruction?.primary?.text,
-                        legIndex = routeProgress.legIndex,
-                        stepIndex = routeProgress.stepIndex,
-                        currentStepBearingAfter = currentStepBearingAfter,
-                        currentStepBearingBefore = currentStepBearingBefore,
-                        currentStepDrivingSide = routeProgress.currentLegProgress()?.currentStep()?.drivingSide(),
-                        currentStepExits = routeProgress.currentLegProgress()?.currentStep()?.exits(),
-                        currentStepDistance = routeProgress.currentLegProgress()?.currentStep()?.distance(),
-                        currentStepDuration = routeProgress.currentLegProgress()?.currentStep()?.duration(),
-                        currentStepName = routeProgress.currentLegProgress()?.currentStep()?.name(),
-                        upComingStepBearingAfter = upComingStepBearingAfter,
-                        upComingStepBearingBefore = upComingStepBearingBefore,
-                        upComingStepDrivingSide = routeProgress.currentLegProgress()?.upComingStep()?.drivingSide(),
-                        upComingStepExits = routeProgress.currentLegProgress()?.upComingStep()?.exits(),
-                        upComingStepDistance = routeProgress.currentLegProgress()?.upComingStep()?.distance(),
-                        upComingStepDuration = routeProgress.currentLegProgress()?.upComingStep()?.duration(),
-                        upComingStepName = routeProgress.currentLegProgress()?.upComingStep()?.name()
-                ).toString())
+        val progressData = ProgressData(
+                distance = routeProgress.directionsRoute?.distance(),
+                duration = routeProgress.directionsRoute?.duration(),
+                currentLatitude = location.latitude,
+                currentLongitude = location.longitude,
+                upcomingLatitude = routeProgress.upcomingStepPoints()?.first()?.latitude(),
+                upcomingLongitude = routeProgress.upcomingStepPoints()?.first()?.longitude(),
+                distanceTraveled = routeProgress.distanceTraveled(),
+                currentLegDistanceTraveled = routeProgress.currentLegProgress?.distanceTraveled,
+                currentLegDistanceRemaining = routeProgress.currentLegProgress?.distanceRemaining,
+                legDistanceRemaining = routeProgress.legDistanceRemaining,
+                legDurationRemaining = routeProgress.legDurationRemaining,
+                stepDistanceRemaining = routeProgress.stepDistanceRemaining,
+                voiceInstruction = routeProgress.voiceInstruction?.announcement,
+                bannerInstruction = routeProgress.bannerInstruction?.primary?.text,
+                upComingVoiceInstruction = routeProgress.currentLegProgress?.upComingStep?.voiceInstructions()?.first()?.announcement(),
+                upComingBannerInstruction = routeProgress.currentLegProgress?.upComingStep?.bannerInstructions()?.first()?.primary()?.text(),
+                legIndex = routeProgress.legIndex,
+                stepIndex = routeProgress.stepIndex,
+                currentStepBearingAfter = currentStepBearingAfter,
+                currentStepBearingBefore = currentStepBearingBefore,
+                currentStepDrivingSide = routeProgress.currentLegProgress()?.currentStep()?.drivingSide(),
+                currentStepExits = routeProgress.currentLegProgress()?.currentStep()?.exits(),
+                currentStepDistance = routeProgress.currentLegProgress()?.currentStep()?.distance(),
+                currentStepDuration = routeProgress.currentLegProgress()?.currentStep()?.duration(),
+                currentStepName = routeProgress.currentLegProgress()?.currentStep()?.name(),
+                upComingStepBearingAfter = upComingStepBearingAfter,
+                upComingStepBearingBefore = upComingStepBearingBefore,
+                upComingStepDrivingSide = routeProgress.currentLegProgress()?.upComingStep()?.drivingSide(),
+                upComingStepExits = routeProgress.currentLegProgress()?.upComingStep()?.exits(),
+                upComingStepDistance = routeProgress.currentLegProgress()?.upComingStep()?.distance(),
+                upComingStepDuration = routeProgress.currentLegProgress()?.upComingStep()?.duration(),
+                upComingStepName = routeProgress.currentLegProgress()?.upComingStep()?.name()
+        )
 
+        EventSendHelper.sendEvent(MapBoxEvents.PROGRESS_CHANGE, progressData.toString())
+        
         if (FlutterMapViewFactory.debug)
-            Timber.i(String.format("onProgressChange, %s, %s", "Current Location: ${location.latitude},${location.longitude}",
-                    "Distance Remaining: ${routeProgress.currentLegProgress?.distanceRemaining}"))
+            Timber.i(String.format("onProgressChange, %s, %s, %s", "Current Location: ${location.latitude},${location.longitude}",
+                    "Distance Travelled: ${progressData.currentLegDistanceTraveled}",
+                    "Distance Remaining: ${progressData.currentLegDistanceRemaining}"
+            ))
     }
 }

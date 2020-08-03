@@ -1,16 +1,22 @@
 package com.umair.mapbox_navigation.models
 
 data class ProgressData(
+        val distance: Double?,
+        val duration: Double?,
         val currentLatitude: Double?,
         val currentLongitude: Double?,
         val upcomingLatitude: Double?,
         val upcomingLongitude: Double?,
         val distanceTraveled: Double?,
-        val legDistanceTraveled: Double?,
+        val currentLegDistanceTraveled: Double?,
+        val currentLegDistanceRemaining: Double?,
         val legDistanceRemaining: Double?,
         val legDurationRemaining: Double?,
+        val stepDistanceRemaining: Double?,
         var voiceInstruction: String?,
         var bannerInstruction: String?,
+        var upComingVoiceInstruction: String?,
+        var upComingBannerInstruction: String?,
         var legIndex: Int?,
         var stepIndex: Int?,
         var currentStepBearingAfter: Double?,
@@ -30,16 +36,22 @@ data class ProgressData(
 ) {
     override fun toString(): String {
         return "{" +
+                "  \"distance\": $distance," +
+                "  \"duration\": $duration," +
                 "  \"currentLatitude\": $currentLatitude," +
                 "  \"currentLongitude\": $currentLongitude," +
                 "  \"upcomingLatitude\": $upcomingLatitude," +
                 "  \"upcomingLongitude\": $upcomingLongitude," +
                 "  \"distanceTraveled\": $distanceTraveled," +
-                "  \"legDistanceTraveled\": $legDistanceTraveled," +
+                "  \"currentLegDistanceTraveled\": $currentLegDistanceTraveled," +
+                "  \"currentLegDistanceRemaining\": $currentLegDistanceRemaining," +
                 "  \"legDistanceRemaining\": $legDistanceRemaining," +
                 "  \"legDurationRemaining\": $legDurationRemaining," +
+                "  \"stepDistanceRemaining\": $stepDistanceRemaining," +
                 "  \"voiceInstruction\": \"$voiceInstruction\"," +
                 "  \"bannerInstruction\": \"$bannerInstruction\"," +
+                "  \"upComingVoiceInstruction\": \"$upComingVoiceInstruction\"," +
+                "  \"upComingBannerInstruction\": \"$upComingBannerInstruction\"," +
                 "  \"legIndex\": $legIndex," +
                 "  \"stepIndex\": $stepIndex," +
                 "  \"currentStepBearingAfter\": $currentStepBearingAfter," +

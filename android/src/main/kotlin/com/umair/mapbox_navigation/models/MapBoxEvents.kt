@@ -2,7 +2,9 @@ package com.umair.mapbox_navigation.models
 
 enum class MapBoxEvents(val value: String) {
     MAP_READY("map_ready"),
+    ROUTE_BUILDING("route_building"),
     ROUTE_BUILT("route_built"),
+    ROUTE_BUILD_FAILED("route_build_failed"),
     PROGRESS_CHANGE("progress_change"),
     USER_OFF_ROUTE("user_off_route"),
     MILESTONE_EVENT("milestone_event"),

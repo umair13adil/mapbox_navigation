@@ -15,4 +15,9 @@ class MapBoxLocation {
     data['longitude'] = this.longitude;
     return data;
   }
+
+  @override
+  String toString() {
+    return 'MapBoxLocation{latitude: $latitude, longitude: $longitude}';
+  }
 }

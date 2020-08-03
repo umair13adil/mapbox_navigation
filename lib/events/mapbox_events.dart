@@ -1,6 +1,8 @@
 enum MapBoxEvent {
   map_ready,
+  route_building,
   route_built,
+  route_build_failed,
   progress_change,
   user_off_route,
   milestone_event,

@@ -24,11 +24,21 @@ class _MyAppState extends State<MyApp> {
     mapBox.init();
 
     mapBox.getMapBoxEventResults().onData((data) {
-      //print("Event: ${data.eventName}, Data: ${data.data}");
+      print("Event: ${data.eventName}, Data: ${data.data}");
 
       var event = MapBoxEventProvider.getEventType(data.eventName);
 
-      if (event == MapBoxEvent.route_built) {
+      if (event == MapBoxEvent.route_building) {
+        setState(() {
+          isLoading = true;
+        });
+        print("Building route..");
+      } else if (event == MapBoxEvent.route_build_failed) {
+        setState(() {
+          isLoading = false;
+        });
+        print("Route building failed.");
+      } else if (event == MapBoxEvent.route_built) {
         setState(() {
           isLoading = false;
         });
@@ -67,6 +77,14 @@ class _MyAppState extends State<MyApp> {
         setState(() {
           isRouteInProgress = false;
         });
+      } else if (event == MapBoxEvent.user_off_route) {
+        var locationData = MapBoxLocation.fromJson(jsonDecode(data.data));
+        print("User has off-routed: Location: ${locationData.toString()}");
+      } else if (event == MapBoxEvent.faster_route_found) {
+        var routeResponse = MapBoxRouteResponse.fromJson(jsonDecode(data.data));
+        print(
+            "Faster route found: Route Distance: ${routeResponse.routes.first.distance},"
+            "Route Duration: ${routeResponse.routes.first.duration}");
       }
     });
   }
