@@ -1,3 +1,9 @@
+## 1.0.2
+
+* Added new events
+* Updated MapBoxProgressEvent data class
+* Added Off-Route & Faster Route Found handling
+
 ## 1.0.1
 
 * Added Embedded MabBox Navigation Feature

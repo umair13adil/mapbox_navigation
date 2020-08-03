@@ -300,18 +300,18 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
     private fun getRoute(context: Context) {
 
         if (!isNetworkAvailable(context)) {
-            EventSendHelper.sendEvent(MapBoxEvents.ROUTE_BUILD_FAILED)
-            isBuildingRoute = false
+            doOnRouteBuildFailed("Network not available.")
             return
         }
 
-        EventSendHelper.sendEvent(MapBoxEvents.ROUTE_BUILDING)
-
-        if (debug)
-            Timber.i("Building new route..")
-
         originPoint?.let { originPoint ->
             destinationPoint?.let { destinationPoint ->
+
+                EventSendHelper.sendEvent(MapBoxEvents.ROUTE_BUILDING)
+
+                if (debug)
+                    Timber.i("Building new route..")
+
                 NavigationRoute.builder(context)
                         .accessToken(Mapbox.getAccessToken()!!)
                         .origin(originPoint)
@@ -331,14 +331,13 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                                     Timber.i(String.format("Response code, %s", response.code()))
 
                                 if (response.body() == null) {
-                                    if (debug)
-                                        Timber.e(String.format("No routes found, make sure you set the right user and access token., %s", response.code()))
+                                    doOnRouteBuildFailed("No routes found, make sure you set the right user and access token.")
                                     return
                                 } else if (response.body()!!.routes().size < 1) {
-                                    if (debug)
-                                        Timber.e(String.format("No routes found, %s", response.code()))
+                                    doOnRouteBuildFailed("No routes found.")
                                     return
                                 }
+
                                 currentRoute = response.body()!!.routes()[0]
                                 EventSendHelper.sendEvent(MapBoxEvents.ROUTE_BUILT, data = "${response.body()?.toJson()}")
 
@@ -360,13 +359,23 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                             }
 
                             override fun onFailure(call: Call<DirectionsResponse?>, throwable: Throwable) {
-                                Timber.e(String.format("Error, %s", throwable.message))
+                                Timber.e(String.format("getRoute: Error, %s", throwable.message))
                                 isBuildingRoute = false
                                 EventSendHelper.sendEvent(MapBoxEvents.ROUTE_BUILD_FAILED)
                             }
                         })
             }
-        }
+                    ?: doOnRouteBuildFailed("Destination point not set.")
+        } ?: doOnRouteBuildFailed("Origin point not set.")
+    }
+
+    private fun doOnRouteBuildFailed(message: String) {
+        isBuildingRoute = false
+        EventSendHelper.sendEvent(MapBoxEvents.ROUTE_BUILD_FAILED, data = message)
+        Timber.e(String.format("getRoute: Unable to build route, %s", message))
+        isNavigationInProgress = false
+        moveCameraToOriginOfRoute()
+        cancelEmbeddedNavigation()
     }
 
     private fun moveCameraToOriginOfRoute() {
@@ -458,15 +467,6 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
     override fun userOffRoute(location: Location) {
 
         doOnNewRoute(Point.fromLngLat(location.latitude, location.longitude))
-
-        EventSendHelper.sendEvent(MapBoxEvents.USER_OFF_ROUTE,
-                LocationData(
-                        latitude = location.latitude,
-                        longitude = location.longitude
-                ).toString())
-
-        if (debug)
-            Timber.i(String.format("userOffRoute, %s", "Current Location: ${location.latitude},${location.longitude}"))
     }
 
     override fun onMilestoneEvent(routeProgress: RouteProgress, instruction: String, milestone: Milestone) {
@@ -591,11 +591,7 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
     }
 
     override fun onOffRoute(offRoutePoint: Point?) {
-
         doOnNewRoute(offRoutePoint)
-
-        if (debug)
-            Timber.i(String.format("onOffRoute, %s", "Point: ${offRoutePoint?.latitude()}, ${offRoutePoint?.longitude()}"))
     }
 
     private fun doOnNewRoute(offRoutePoint: Point?) {
@@ -605,6 +601,15 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
 
             offRoutePoint?.let {
                 moveCamera(LatLng(it.latitude(), it.longitude()))
+
+                EventSendHelper.sendEvent(MapBoxEvents.USER_OFF_ROUTE,
+                        LocationData(
+                                latitude = it.latitude(),
+                                longitude = it.longitude()
+                        ).toString())
+
+                if (debug)
+                    Timber.i(String.format("userOffRoute, %s", "Current Location: ${it.latitude()},${it.longitude()}"))
             }
 
             EventSendHelper.sendEvent(MapBoxEvents.USER_OFF_ROUTE,
@@ -614,6 +619,7 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                     ).toString())
 
             originPoint = offRoutePoint
+            isNavigationInProgress = true
             getRoute(context)
         }
     }
