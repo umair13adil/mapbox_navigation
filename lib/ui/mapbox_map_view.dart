@@ -113,6 +113,16 @@ class MapViewController {
     });
   }
 
+  Future<String> getFormattedDistance(double distance) async {
+    return await _channel.invokeMethod(
+        'getFormattedDistance', <String, dynamic>{'distance': distance});
+  }
+
+  Future<String> getFormattedDuration(double distance) async {
+    return await _channel.invokeMethod(
+        'getFormattedDuration', <String, dynamic>{'duration': distance});
+  }
+
   Future<String> moveCameraToPosition(
       {double latitude, double longitude}) async {
     return _channel.invokeMethod('moveCameraToPosition', <String, dynamic>{

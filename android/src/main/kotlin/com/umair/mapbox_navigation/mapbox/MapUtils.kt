@@ -6,14 +6,18 @@ import android.location.Location
 import com.mapbox.android.core.location.LocationEngine
 import com.mapbox.android.core.location.LocationEngineCallback
 import com.mapbox.android.core.location.LocationEngineResult
+import com.mapbox.api.directions.v5.DirectionsCriteria
 import com.mapbox.api.directions.v5.models.DirectionsResponse
 import com.mapbox.api.directions.v5.models.DirectionsRoute
 import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.geometry.LatLng
 import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute
+import com.mapbox.services.android.navigation.v5.navigation.NavigationConstants
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
 import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress
+import com.mapbox.services.android.navigation.v5.utils.DistanceFormatter
+import com.mapbox.services.android.navigation.v5.utils.time.TimeFormatter
 import com.mapbox.turf.TurfConstants
 import com.mapbox.turf.TurfMeasurement
 import com.umair.mapbox_navigation.R
@@ -25,6 +29,7 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import timber.log.Timber
+import java.util.*
 
 object MapUtils {
 
@@ -105,7 +110,8 @@ object MapUtils {
         )
     }
 
-    fun doOnProgressChange(location: Location, routeProgress: RouteProgress) {
+    fun doOnProgressChange(location: Location, routeProgress: RouteProgress, context: Context) {
+        val formattedDistance = formatDistance(routeProgress.distanceTraveled(), context, FlutterMapViewFactory.locale)
         val upComingStepBearingAfter = routeProgress.currentLegProgress()?.upComingStep?.maneuver()?.bearingAfter()
         val upComingStepBearingBefore = routeProgress.currentLegProgress()?.upComingStep?.maneuver()?.bearingBefore()
         val currentStepBearingAfter = routeProgress.currentLegProgress()?.currentStep?.maneuver()?.bearingAfter()
@@ -147,11 +153,26 @@ object MapUtils {
         )
 
         EventSendHelper.sendEvent(MapBoxEvents.PROGRESS_CHANGE, progressData.toString())
-        
+
         if (FlutterMapViewFactory.debug)
             Timber.i(String.format("onProgressChange, %s, %s, %s", "Current Location: ${location.latitude},${location.longitude}",
                     "Distance Travelled: ${progressData.currentLegDistanceTraveled}",
-                    "Distance Remaining: ${progressData.currentLegDistanceRemaining}"
+                    "Distance Remaining: $formattedDistance"
             ))
+    }
+
+    fun formatDistance(distance: Double?, context: Context, locale: Locale): String {
+        val unitType = DirectionsCriteria.METRIC
+        val roundingIncrement = NavigationConstants.ROUNDING_INCREMENT_TWENTY_FIVE
+        val distanceFormatter = DistanceFormatter(context, locale.language, unitType, roundingIncrement)
+        distance?.let {
+            return distanceFormatter.formatDistance(distance).toString()
+        } ?: return "$distance"
+    }
+
+    fun formatTime(routeDuration: Double?, context: Context): String {
+        routeDuration?.let {
+            return TimeFormatter.formatTimeRemaining(context, routeDuration).toString()
+        } ?: return "$routeDuration"
     }
 }

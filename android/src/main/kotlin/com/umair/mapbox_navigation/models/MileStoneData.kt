@@ -8,7 +8,7 @@ data class MileStoneData(var identifier: Int?,
     override fun toString(): String {
         return "{" +
                 "  \"identifier\": \"$identifier\"," +
-                "  \"distanceTraveled\": \"$distanceTraveled\"," +
+                "  \"distanceTraveled\": $distanceTraveled," +
                 "  \"legIndex\": \"$legIndex\"," +
                 "  \"stepIndex\": \"$stepIndex\"" +
                 "}"

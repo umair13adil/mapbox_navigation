@@ -137,7 +137,7 @@ class NavigationActivity : AppCompatActivity(), OnNavigationReadyCallback,
     }
 
     override fun onProgressChange(location: Location, routeProgress: RouteProgress) {
-        MapUtils.doOnProgressChange(location, routeProgress)
+        MapUtils.doOnProgressChange(location, routeProgress, this)
     }
 
     override fun userOffRoute(location: Location) {

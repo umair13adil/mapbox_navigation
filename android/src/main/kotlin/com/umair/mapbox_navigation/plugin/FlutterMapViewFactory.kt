@@ -69,6 +69,7 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import timber.log.Timber
+import java.util.*
 
 class FlutterMapViewFactory internal constructor(private val context: Context, messenger: BinaryMessenger, id: Int, private val activity: Activity) :
         PlatformView,
@@ -126,6 +127,7 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
         var destinationLong = 0.0
         var shouldSimulateRoute = false
         var language = "en"
+        var locale = Locale.US
         var zoom = 15.0
         var bearing = 0.0
         var tilt = 0.0
@@ -170,6 +172,12 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
             }
             "stopNavigation" -> {
                 cancelEmbeddedNavigation(methodCall, result)
+            }
+            "getFormattedDistance" -> {
+                getFormattedDistance(methodCall, result)
+            }
+            "getFormattedDuration" -> {
+                getFormattedDuration(methodCall, result)
             }
             else -> result.notImplemented()
         }
@@ -316,13 +324,14 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
                         .accessToken(Mapbox.getAccessToken()!!)
                         .origin(originPoint)
                         .destination(destinationPoint)
-                        .language(getLocaleFromCode(language))
+                        .language(locale)
                         .alternatives(alternatives)
                         .clientAppName(clientAppName)
                         .profile(profile)
                         .continueStraight(continueStraight)
                         .enableRefresh(enableRefresh)
                         .voiceUnits(DirectionsCriteria.METRIC)
+                        .annotations(DirectionsCriteria.ANNOTATION_DISTANCE, DirectionsCriteria.ANNOTATION_DURATION, DirectionsCriteria.ANNOTATION_DURATION, DirectionsCriteria.ANNOTATION_CONGESTION)
                         .build()
                         .getRoute(object : Callback<DirectionsResponse> {
                             override fun onResponse(call: Call<DirectionsResponse?>, response: Response<DirectionsResponse?>) {
@@ -429,10 +438,7 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
     }
 
     override fun onRefresh(directionsRoute: DirectionsRoute) {
-        if (debug)
-            Timber.i(String.format("onRefresh, %s", "New Route Distance: ${directionsRoute.distance()}"))
-
-        refreshNavigation(directionsRoute)
+        refreshNavigation(directionsRoute, shouldCancel = false)
         isRefreshing = false
     }
 
@@ -445,7 +451,8 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
 
         if (!isNavigationCanceled) {
             try {
-                MapUtils.doOnProgressChange(location, routeProgress)
+
+                MapUtils.doOnProgressChange(location, routeProgress, context)
 
                 addCustomMarker(LatLng(location.latitude, location.longitude), R.drawable.mapbox_marker_icon_default)
 
@@ -532,12 +539,16 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
             Timber.i(String.format("fasterRouteFound, %s", "New Route Distance: ${directionsRoute.distance()}"))
     }
 
-    private fun refreshNavigation(directionsRoute: DirectionsRoute?) {
+    private fun refreshNavigation(directionsRoute: DirectionsRoute?, shouldCancel: Boolean = true) {
         directionsRoute?.let {
-            cancelEmbeddedNavigation()
-            currentRoute = directionsRoute
 
-            if (isNavigationInProgress) {
+            if (shouldCancel) {
+
+                if (debug)
+                    Timber.e(String.format("refreshNavigation: Building new route, %s", directionsRoute.distance()))
+
+                currentRoute = directionsRoute
+                cancelEmbeddedNavigation()
                 startEmbeddedNavigation()
             }
         }
@@ -597,9 +608,14 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
     private fun doOnNewRoute(offRoutePoint: Point?) {
         if (!isBuildingRoute) {
             isBuildingRoute = true
-            cancelEmbeddedNavigation(isOffRouted = true)
+
+            if (debug)
+                Timber.e(String.format("doOnNewRoute: Building new route.."))
 
             offRoutePoint?.let {
+
+                cancelEmbeddedNavigation(isOffRouted = true)
+
                 moveCamera(LatLng(it.latitude(), it.longitude()))
 
                 EventSendHelper.sendEvent(MapBoxEvents.USER_OFF_ROUTE,
@@ -694,6 +710,8 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
         bannerInstructions = getBoolValueById("bannerInstructions", methodCall)
         testRoute = getStringValueById("testRoute", methodCall)
         debug = getBoolValueById("debug", methodCall)
+
+        locale = getLocaleFromCode(language)
 
         result.success("MapView options set.")
     }
@@ -797,6 +815,9 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
 
     private fun cancelEmbeddedNavigation(methodCall: MethodCall, result: MethodChannel.Result) {
 
+        if (debug)
+            Timber.e(String.format("cancelEmbeddedNavigation: Cancelling navigation.."))
+
         cancelEmbeddedNavigation()
 
         if (currentRoute != null) {
@@ -804,6 +825,16 @@ class FlutterMapViewFactory internal constructor(private val context: Context, m
         } else {
             result.success("No route found. Unable to stop navigation.")
         }
+    }
+
+    private fun getFormattedDistance(methodCall: MethodCall, result: MethodChannel.Result) {
+        val distance = getDoubleValueById("distance", methodCall)
+        result.success(MapUtils.formatDistance(distance, context, locale))
+    }
+
+    private fun getFormattedDuration(methodCall: MethodCall, result: MethodChannel.Result) {
+        val duration = getDoubleValueById("duration", methodCall)
+        result.success(MapUtils.formatTime(duration, context))
     }
 
     private fun addMarker(methodCall: MethodCall, result: MethodChannel.Result) {

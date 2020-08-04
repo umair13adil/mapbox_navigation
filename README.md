@@ -68,41 +68,83 @@ dependencies:
         mapBox.getMapBoxEventResults().onData((data) {
             print("Event: ${data.eventName}, Data: ${data.data}");
 
-            //Get MapBox Event Type
             var event = MapBoxEventProvider.getEventType(data.eventName);
 
-            if (event == MapBoxEvent.route_built) {
+            if (event == MapBoxEvent.route_building) {
 
+                print("Building route..");
+
+            } else if (event == MapBoxEvent.route_build_failed) {
+
+                print("Route building failed.");
+
+            } else if (event == MapBoxEvent.route_built) {
                 var routeResponse = MapBoxRouteResponse.fromJson(jsonDecode(data.data));
 
-                print("Route Distance: ${routeResponse.routes.first.distance},"
-                      "Route Duration: ${routeResponse.routes.first.duration}");
+                controller.getFormattedDistance(routeResponse.routes.first.distance)
+                    .then((value) => print("Route Distance: $value"));
+
+                controller.getFormattedDuration(routeResponse.routes.first.duration)
+                    .then((value) => print("Route Duration: $value"));
 
             } else if (event == MapBoxEvent.progress_change) {
-                
+
+
                 var progressEvent = MapBoxProgressEvent.fromJson(jsonDecode(data.data));
 
-                print("Leg Distance Remaining: ${progressEvent.legDistanceRemaining},"
-                      "Leg Duration Remaining: ${progressEvent.legDurationRemaining},"
-                      "Distance Travelled: ${progressEvent.distanceTraveled}");
+                controller.getFormattedDistance(progressEvent.legDistanceRemaining)
+                    .then((value) => print("Leg Distance Remaining: $value"));
+
+                controller.getFormattedDistance(progressEvent.distanceTraveled)
+                    .then((value) => print("Distance Travelled: $value"));
+
+                controller.getFormattedDuration(progressEvent.legDurationRemaining)
+                    .then((value) => print("Leg Duration Remaining: $value"));
+
+                print(
+                    "Voice Instruction: ${progressEvent.voiceInstruction},"
+                    "Banner Instruction: ${progressEvent.bannerInstruction}");
 
             } else if (event == MapBoxEvent.milestone_event) {
 
                 var mileStoneEvent = MapBoxMileStoneEvent.fromJson(jsonDecode(data.data));
 
-                print("Distance Travelled: ${mileStoneEvent.distanceTraveled}");
+                controller.getFormattedDistance(mileStoneEvent.distanceTraveled)
+                    .then((value) => print("Distance Travelled: $value"));
 
             } else if (event == MapBoxEvent.speech_announcement) {
 
                 var speechEvent = MapBoxEventData.fromJson(jsonDecode(data.data));
-
                 print("Speech Text: ${speechEvent.data}");
 
             } else if (event == MapBoxEvent.banner_instruction) {
 
                 var bannerEvent = MapBoxEventData.fromJson(jsonDecode(data.data));
-
                 print("Banner Text: ${bannerEvent.data}");
+
+            } else if (event == MapBoxEvent.navigation_cancelled) {
+
+
+            } else if (event == MapBoxEvent.navigation_finished) {
+
+
+            } else if (event == MapBoxEvent.on_arrival) {
+
+
+            } else if (event == MapBoxEvent.user_off_route) {
+
+                var locationData = MapBoxLocation.fromJson(jsonDecode(data.data));
+                print("User has off-routed: Location: ${locationData.toString()}");
+
+            } else if (event == MapBoxEvent.faster_route_found) {
+
+                var routeResponse = MapBoxRouteResponse.fromJson(jsonDecode(data.data));
+
+                controller.getFormattedDistance(routeResponse.routes.first.distance)
+                    .then((value) => print("Faster route found: Route Distance: $value"));
+
+                controller.getFormattedDuration(routeResponse.routes.first.duration)
+                    .then((value) => print("Faster route found: Route Duration: $value"));
             }
         });
     }
@@ -242,6 +284,24 @@ This will move camera to provided location.
     await controller.moveCameraToPosition(
             latitude: 33.569126, 
             longitude: 73.1231471);
+```
+
+### Format Distance:
+
+This will return formatted distance in meters/Kilometers.
+
+```dart
+    controller.getFormattedDistance(88777.99)
+            .then((value) => print("Distance: $value"));
+```
+
+### Format Duration:
+
+This will return formatted duration hh/mm/ss.
+
+```dart
+    controller.getFormattedDuration(88777.99)
+            .then((value) => print("Duration: $value"));
 ```
 
 ### MapBox Events:

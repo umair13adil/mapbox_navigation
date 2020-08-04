@@ -1,6 +1,6 @@
 class MapBoxMileStoneEvent {
   String identifier;
-  String distanceTraveled;
+  double distanceTraveled;
   String legIndex;
   String stepIndex;
 

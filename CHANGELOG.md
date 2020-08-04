@@ -1,3 +1,8 @@
+## 1.0.3
+
+* Added distance formatter
+* Added duration formatter
+
 ## 1.0.2
 
 * Added new events
