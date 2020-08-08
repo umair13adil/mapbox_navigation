@@ -1,8 +1,8 @@
 package com.umair.mapbox_navigation.models
 
 data class ProgressData(
-        val distance: Double?,
-        val duration: Double?,
+        val distance: Double?, //Total distance in Metric Units of route
+        val duration: Double?, //Total duration of route in hh//mm/ss
         val currentLatitude: Double?,
         val currentLongitude: Double?,
         val upcomingLatitude: Double?,
@@ -15,6 +15,7 @@ data class ProgressData(
         val stepDistanceRemaining: Double?,
         var voiceInstruction: String?,
         var bannerInstruction: String?,
+        var currentStepInstruction: String?, //Step Instruction
         var upComingVoiceInstruction: String?,
         var upComingBannerInstruction: String?,
         var legIndex: Int?,
@@ -26,13 +27,17 @@ data class ProgressData(
         var currentStepDistance: Double?,
         var currentStepDuration: Double?,
         var currentStepName: String?,
+        var currentStepManeuverType: String?,
+        var currentDirection: String?, //Values: [left, right, straight]
         var upComingStepBearingAfter: Double?,
         var upComingStepBearingBefore: Double?,
         var upComingStepDrivingSide: String?,
         var upComingStepExits: String?,
         var upComingStepDistance: Double?,
         var upComingStepDuration: Double?,
-        var upComingStepName: String?
+        var upComingStepName: String?,
+        var upComingStepManeuverType: String?,
+        var upComingDirection: String? //Values: [left, right]
 ) {
     override fun toString(): String {
         return "{" +
@@ -50,6 +55,7 @@ data class ProgressData(
                 "  \"stepDistanceRemaining\": $stepDistanceRemaining," +
                 "  \"voiceInstruction\": \"$voiceInstruction\"," +
                 "  \"bannerInstruction\": \"$bannerInstruction\"," +
+                "  \"currentStepInstruction\": \"$currentStepInstruction\"," +
                 "  \"upComingVoiceInstruction\": \"$upComingVoiceInstruction\"," +
                 "  \"upComingBannerInstruction\": \"$upComingBannerInstruction\"," +
                 "  \"legIndex\": $legIndex," +
@@ -61,13 +67,17 @@ data class ProgressData(
                 "  \"currentStepDistance\": $currentStepDistance," +
                 "  \"currentStepDuration\": $currentStepDuration," +
                 "  \"currentStepName\": \"$currentStepName\"," +
+                "  \"currentStepManeuverType\": \"$currentStepManeuverType\"," +
+                "  \"currentDirection\": \"$currentDirection\"," +
                 "  \"upComingStepBearingAfter\": $upComingStepBearingAfter," +
                 "  \"upComingStepBearingBefore\": $upComingStepBearingBefore," +
                 "  \"upComingStepDrivingSide\": \"$upComingStepDrivingSide\"," +
                 "  \"upComingStepExits\": \"$upComingStepExits\"," +
                 "  \"upComingStepDistance\": $upComingStepDistance," +
                 "  \"upComingStepDuration\": $upComingStepDuration," +
-                "  \"upComingStepName\": \"$upComingStepName\"" +
+                "  \"upComingStepName\": \"$upComingStepName\"," +
+                "  \"upComingStepManeuverType\": \"$upComingStepManeuverType\"," +
+                "  \"upComingDirection\": \"$upComingDirection\"" +
                 "}"
     }
 }

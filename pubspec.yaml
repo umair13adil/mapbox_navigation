@@ -1,6 +1,6 @@
 name: mapbox_navigation
 description: A Flutter plugin for MapBox's Navigation SDK, NavigationView & Navigation services.
-version: 1.0.3
+version: 1.0.4
 homepage: https://github.com/umair13adil/mapbox_navigation
 
 environment:

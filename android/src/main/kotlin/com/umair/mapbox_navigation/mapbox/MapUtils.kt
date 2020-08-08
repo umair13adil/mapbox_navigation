@@ -20,7 +20,6 @@ import com.mapbox.services.android.navigation.v5.utils.DistanceFormatter
 import com.mapbox.services.android.navigation.v5.utils.time.TimeFormatter
 import com.mapbox.turf.TurfConstants
 import com.mapbox.turf.TurfMeasurement
-import com.umair.mapbox_navigation.R
 import com.umair.mapbox_navigation.models.EventSendHelper
 import com.umair.mapbox_navigation.models.MapBoxEvents
 import com.umair.mapbox_navigation.models.ProgressData
@@ -31,6 +30,7 @@ import retrofit2.Response
 import timber.log.Timber
 import java.util.*
 
+
 object MapUtils {
 
     private var destination: Point? = null
@@ -38,6 +38,9 @@ object MapUtils {
     private var locationEngine: LocationEngine? = null
     private var currentRoute: DirectionsRoute? = null
     private var navigationMapRoute: NavigationMapRoute? = null
+    private var rightDirectionsCount = 0
+    private var leftDirectionsCount = 0
+    private var currentManeuver = ""
 
     private fun addDestination(point: LatLng) {
         if (destination == null) {
@@ -114,8 +117,9 @@ object MapUtils {
         val formattedDistance = formatDistance(routeProgress.distanceTraveled(), context, FlutterMapViewFactory.locale)
         val upComingStepBearingAfter = routeProgress.currentLegProgress()?.upComingStep?.maneuver()?.bearingAfter()
         val upComingStepBearingBefore = routeProgress.currentLegProgress()?.upComingStep?.maneuver()?.bearingBefore()
-        val currentStepBearingAfter = routeProgress.currentLegProgress()?.currentStep?.maneuver()?.bearingAfter()
-        val currentStepBearingBefore = routeProgress.currentLegProgress()?.currentStep?.maneuver()?.bearingBefore()
+        val currentStepBearingAfter = routeProgress.currentStep?.maneuver()?.bearingAfter()
+        val currentStepBearingBefore = routeProgress?.currentStep?.maneuver()?.bearingBefore()
+
 
         val progressData = ProgressData(
                 distance = routeProgress.directionsRoute?.distance(),
@@ -132,6 +136,7 @@ object MapUtils {
                 stepDistanceRemaining = routeProgress.stepDistanceRemaining,
                 voiceInstruction = routeProgress.voiceInstruction?.announcement,
                 bannerInstruction = routeProgress.bannerInstruction?.primary?.text,
+                currentStepInstruction = routeProgress.currentStep?.maneuver()?.instruction(),
                 upComingVoiceInstruction = routeProgress.currentLegProgress?.upComingStep?.voiceInstructions()?.first()?.announcement(),
                 upComingBannerInstruction = routeProgress.currentLegProgress?.upComingStep?.bannerInstructions()?.first()?.primary()?.text(),
                 legIndex = routeProgress.legIndex,
@@ -143,13 +148,22 @@ object MapUtils {
                 currentStepDistance = routeProgress.currentLegProgress()?.currentStep()?.distance(),
                 currentStepDuration = routeProgress.currentLegProgress()?.currentStep()?.duration(),
                 currentStepName = routeProgress.currentLegProgress()?.currentStep()?.name(),
+                currentStepManeuverType = routeProgress.currentStep?.maneuver()?.type(),
+                currentDirection = getCurrentDirection(
+                        currentStepBearingBefore,
+                        currentStepBearingAfter,
+                        routeProgress.currentStep?.maneuver()?.type()),
                 upComingStepBearingAfter = upComingStepBearingAfter,
                 upComingStepBearingBefore = upComingStepBearingBefore,
                 upComingStepDrivingSide = routeProgress.currentLegProgress()?.upComingStep()?.drivingSide(),
                 upComingStepExits = routeProgress.currentLegProgress()?.upComingStep()?.exits(),
                 upComingStepDistance = routeProgress.currentLegProgress()?.upComingStep()?.distance(),
                 upComingStepDuration = routeProgress.currentLegProgress()?.upComingStep()?.duration(),
-                upComingStepName = routeProgress.currentLegProgress()?.upComingStep()?.name()
+                upComingStepName = routeProgress.currentLegProgress()?.upComingStep()?.name(),
+                upComingStepManeuverType = routeProgress.currentLegProgress()?.upComingStep()?.maneuver()?.type(),
+                upComingDirection = getUpComingDirection(
+                        upComingStepBearingBefore,
+                        upComingStepBearingAfter)
         )
 
         EventSendHelper.sendEvent(MapBoxEvents.PROGRESS_CHANGE, progressData.toString())
@@ -174,5 +188,62 @@ object MapUtils {
         routeDuration?.let {
             return TimeFormatter.formatTimeRemaining(context, routeDuration).toString()
         } ?: return "$routeDuration"
+    }
+
+    private fun getCurrentDirection(bearingBefore: Double?, bearingAfter: Double?, currentStepManeuverType: String?): String {
+        var lastCurrentDirection = ""
+
+        currentStepManeuverType?.let {
+
+            if (currentManeuver.isEmpty() || currentManeuver != it) {
+                currentManeuver = currentStepManeuverType
+                leftDirectionsCount = 0
+                rightDirectionsCount = 0
+            }
+
+            bearingBefore?.let {
+                bearingAfter?.let {
+                    val isRight: Boolean = (bearingAfter + 540) % 360 - (bearingBefore + 540) % 360 > 0
+
+                    if (isRight) {
+                        lastCurrentDirection = if (rightDirectionsCount <= 2) {
+                            "right"
+                        } else {
+                            "straight"
+                        }
+                        leftDirectionsCount = 0
+                        rightDirectionsCount++
+                    } else {
+                        lastCurrentDirection = if (leftDirectionsCount <= 2) {
+                            "left"
+                        } else {
+                            "straight"
+                        }
+                        rightDirectionsCount = 0
+                        leftDirectionsCount++
+                    }
+                }
+            }
+        }
+
+        return lastCurrentDirection
+    }
+
+    private fun getUpComingDirection(bearingBefore: Double?, bearingAfter: Double?): String {
+        var lastUpComingDirection = ""
+
+        bearingBefore?.let {
+            bearingAfter?.let {
+                val isRight: Boolean = (bearingAfter + 540) % 360 - (bearingBefore + 540) % 360 > 0
+
+                lastUpComingDirection = if (isRight) {
+                    "right"
+                } else {
+                    "left"
+                }
+            }
+        }
+
+        return lastUpComingDirection
     }
 }

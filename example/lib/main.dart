@@ -24,7 +24,7 @@ class _MyAppState extends State<MyApp> {
     mapBox.init();
 
     mapBox.getMapBoxEventResults().onData((data) {
-      print("Event: ${data.eventName}, Data: ${data.data}");
+      printWrapped("Event: ${data.eventName}, Data: ${data.data}");
 
       var event = MapBoxEventProvider.getEventType(data.eventName);
 
@@ -75,8 +75,8 @@ class _MyAppState extends State<MyApp> {
             .then((value) => print("Leg Duration Remaining: $value"));
 
         print(
-            "Voice Instruction: ${progressEvent.voiceInstruction},"
-            "Banner Instruction: ${progressEvent.bannerInstruction}");
+            "Instruction: ${progressEvent.currentStepInstruction},"
+            "Current Direction: ${progressEvent.currentDirection}");
 
       } else if (event == MapBoxEvent.milestone_event) {
 
@@ -267,5 +267,10 @@ class _MyAppState extends State<MyApp> {
     var prettyString = _encoder.convert(object);
     prettyString.split('\n').forEach((element) => print(element));
     return prettyString;
+  }
+
+  void printWrapped(String text) {
+    final pattern = RegExp('.{1,800}'); // 800 is the size of each chunk
+    pattern.allMatches(text).forEach((match) => print(match.group(0)));
   }
 }

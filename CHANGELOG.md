@@ -1,3 +1,7 @@
+## 1.0.4
+
+* Updated MapBoxProgressEvent data class
+
 ## 1.0.3
 
 * Added distance formatter

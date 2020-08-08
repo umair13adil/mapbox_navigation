@@ -13,6 +13,7 @@ class MapBoxProgressEvent {
   double stepDistanceRemaining;
   String voiceInstruction;
   String bannerInstruction;
+  String currentStepInstruction;
   String upComingVoiceInstruction;
   String upComingBannerInstruction;
   int legIndex;
@@ -24,6 +25,8 @@ class MapBoxProgressEvent {
   double currentStepDistance;
   double currentStepDuration;
   String currentStepName;
+  String currentStepManeuverType;
+  String currentDirection;
   double upComingStepBearingAfter;
   double upComingStepBearingBefore;
   String upComingStepDrivingSide;
@@ -31,6 +34,8 @@ class MapBoxProgressEvent {
   double upComingStepDistance;
   double upComingStepDuration;
   String upComingStepName;
+  String upComingStepManeuverType;
+  String upComingDirection;
 
   MapBoxProgressEvent(
       {this.distance,
@@ -47,6 +52,7 @@ class MapBoxProgressEvent {
         this.stepDistanceRemaining,
         this.voiceInstruction,
         this.bannerInstruction,
+        this.currentStepInstruction,
         this.upComingVoiceInstruction,
         this.upComingBannerInstruction,
         this.legIndex,
@@ -58,13 +64,17 @@ class MapBoxProgressEvent {
         this.currentStepDistance,
         this.currentStepDuration,
         this.currentStepName,
+        this.currentStepManeuverType,
+        this.currentDirection,
         this.upComingStepBearingAfter,
         this.upComingStepBearingBefore,
         this.upComingStepDrivingSide,
         this.upComingStepExits,
         this.upComingStepDistance,
         this.upComingStepDuration,
-        this.upComingStepName});
+        this.upComingStepName,
+        this.upComingStepManeuverType,
+        this.upComingDirection});
 
   MapBoxProgressEvent.fromJson(Map<String, dynamic> json) {
     distance = json['distance'];
@@ -81,6 +91,7 @@ class MapBoxProgressEvent {
     stepDistanceRemaining = json['stepDistanceRemaining'];
     voiceInstruction = json['voiceInstruction'];
     bannerInstruction = json['bannerInstruction'];
+    currentStepInstruction = json['currentStepInstruction'];
     upComingVoiceInstruction = json['upComingVoiceInstruction'];
     upComingBannerInstruction = json['upComingBannerInstruction'];
     legIndex = json['legIndex'];
@@ -92,6 +103,8 @@ class MapBoxProgressEvent {
     currentStepDistance = json['currentStepDistance'];
     currentStepDuration = json['currentStepDuration'];
     currentStepName = json['currentStepName'];
+    currentStepManeuverType = json['currentStepManeuverType'];
+    currentDirection = json['currentDirection'];
     upComingStepBearingAfter = json['upComingStepBearingAfter'];
     upComingStepBearingBefore = json['upComingStepBearingBefore'];
     upComingStepDrivingSide = json['upComingStepDrivingSide'];
@@ -99,6 +112,8 @@ class MapBoxProgressEvent {
     upComingStepDistance = json['upComingStepDistance'];
     upComingStepDuration = json['upComingStepDuration'];
     upComingStepName = json['upComingStepName'];
+    upComingStepManeuverType = json['upComingStepManeuverType'];
+    upComingDirection = json['upComingDirection'];
   }
 
   Map<String, dynamic> toJson() {
@@ -117,6 +132,7 @@ class MapBoxProgressEvent {
     data['stepDistanceRemaining'] = this.stepDistanceRemaining;
     data['voiceInstruction'] = this.voiceInstruction;
     data['bannerInstruction'] = this.bannerInstruction;
+    data['currentStepInstruction'] = this.currentStepInstruction;
     data['upComingVoiceInstruction'] = this.upComingVoiceInstruction;
     data['upComingBannerInstruction'] = this.upComingBannerInstruction;
     data['legIndex'] = this.legIndex;
@@ -128,6 +144,8 @@ class MapBoxProgressEvent {
     data['currentStepDistance'] = this.currentStepDistance;
     data['currentStepDuration'] = this.currentStepDuration;
     data['currentStepName'] = this.currentStepName;
+    data['currentStepManeuverType'] = this.currentStepManeuverType;
+    data['currentDirection'] = this.currentDirection;
     data['upComingStepBearingAfter'] = this.upComingStepBearingAfter;
     data['upComingStepBearingBefore'] = this.upComingStepBearingBefore;
     data['upComingStepDrivingSide'] = this.upComingStepDrivingSide;
@@ -135,6 +153,8 @@ class MapBoxProgressEvent {
     data['upComingStepDistance'] = this.upComingStepDistance;
     data['upComingStepDuration'] = this.upComingStepDuration;
     data['upComingStepName'] = this.upComingStepName;
+    data['upComingStepManeuverType'] = this.upComingStepManeuverType;
+    data['upComingDirection'] = this.upComingDirection;
     return data;
   }
 }
